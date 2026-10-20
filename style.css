@@ -1,0 +1,416 @@
+/* The video's palette (remotion/src/theme.ts), dark only, as the videos are. */
+:root {
+	--bg: #0c0f14;
+	--panel: #151a22;
+	--panel-2: #11161d;
+	--line: #262d38;
+	--text: #f2eee6;
+	--muted: #8d96a3;
+	--claude: #f0883e;
+	--gemini: #4ea1ff;
+	--evidence: #f2c14e;
+	--narrator: #e8e2d6; /* the videos' narrator cream: summaries, the coin toss */
+	--moderator: #b48ead;
+	--true: #3fb950;
+	--partly: #d29922;
+	--false: #f85149;
+	--mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+	--sans: 'Chakra Petch', system-ui, sans-serif; /* as in the videos: Chakra Petch for words, JetBrains Mono for the terminal */
+	color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 104px; }
+body {
+	margin: 0;
+	overflow-x: clip; /* nothing ever widens the page sideways (a phone would zoom out and the shapes jump); clip, not hidden, so the pinned tabs still pin */
+	background: var(--bg);
+	color: var(--text);
+	font: 15.5px/1.75 var(--mono); /* long text in the terminal's mono: its letters stay distinct at reading size */
+	-webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+
+/* ── background: the side colours glowing in from opposite corners, and faint outlines drifting ── */
+.bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.glow {
+	position: absolute; inset: 0;
+	background:
+		radial-gradient(900px 700px at -100px 110%, #f0883e1c, transparent 70%),
+		radial-gradient(900px 700px at calc(100% + 100px) -10%, #4ea1ff1c, transparent 70%);
+}
+.shapes { position: absolute; inset: 0; width: 100%; height: 100%; }
+.shapes * { fill: none; stroke-width: 2.5; stroke-linecap: round; }
+
+/* ── header ── */
+/* the logo and ~/debates stay pinned top left, on the page's own colour so they read over whatever scrolls under */
+.top { position: fixed; top: 16px; left: 20px; z-index: 10; }
+.brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; padding: 6px 14px 6px 8px; border-radius: 12px; background: var(--bg); }
+body { padding-top: 88px; }
+.brand svg { display: block; }
+.lockup { display: flex; flex-direction: column; gap: 3px; }
+.brand .ps { font-size: 13px; color: #8d96a3; }
+/* the channel name, done like the logo's CRT: hard RGB fringes either side (no blur, no glow) and scanlines over
+   the letters. --rgb is the fringe width; site.js spikes it when the logo locks. */
+.wordmark { --rgb: 1.5px; display: flex; gap: 0.55ch; position: relative; font: 800 24px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.wordmark > span { position: relative; text-shadow: calc(-1 * var(--rgb)) 0 #ff2a4d99, var(--rgb) 0 #00e5ff99; }
+.wordmark .w1 { color: var(--claude); }
+.wordmark .w2 { color: var(--gemini); }
+.wordmark::after { content: ''; position: absolute; inset: -2px; pointer-events: none; background: repeating-linear-gradient(to bottom, transparent 0 2px, #0c0f14a6 2px 3px); }
+/* the channel's cursor, after the name: Opus orange and Argon blue split by the logo's yin-yang S, a character cell wide and cap-height tall,
+   sitting on the baseline, with the name's fringes. It takes no room, so the name keeps its place. */
+.wordmark { align-items: baseline; }
+.wordmark .cursor.duo { width: 0.6em; height: 0.72em; vertical-align: 0; margin-left: calc(-0.55ch + 0.12em); margin-right: -0.72em; opacity: 1;
+	background: repeating-linear-gradient(to bottom, transparent 0 2px, #0c0f14a6 2px 3px), url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2060%2072%22%20preserveAspectRatio=%22none%22%3E%3Crect%20width=%2260%22%20height=%2272%22%20fill=%22%234ea1ff%22/%3E%3Cpath%20d=%22M0,0%20L30,0%20C50,9%2050,27%2030,36%20C10,45%2010,63%2030,72%20L0,72%20Z%22%20fill=%22%23f0883e%22/%3E%3C/svg%3E") 0 0 / 100% 100%; /* its own scanlines: it sits outside the name's */
+	box-shadow: calc(-1 * var(--rgb)) 0 #ff2a4d99, var(--rgb) 0 #00e5ff99; }
+.ps { font: 600 15px var(--mono); color: var(--muted); letter-spacing: 0.02em; }
+
+/* ── shared ── */
+.hero { margin: 8px 0 34px; }
+.kicker { font: 700 13px var(--sans); letter-spacing: 0.32em; text-transform: uppercase; color: var(--muted); }
+/* headings, names and labels in Chakra Petch, as in the videos */
+.entry header, .sides, .text h4 { font-family: var(--sans); }
+h1 { font: 700 clamp(30px, 5vw, 50px)/1.1 var(--sans); margin: 14px 0 18px; letter-spacing: -0.01em; }
+.note { color: var(--muted); max-width: 62ch; margin: 0; }
+
+/* ── home: a terminal window running `tree` ── */
+.home { max-width: 980px; margin: 0 auto; padding: 40px 28px 80px; }
+.term { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+/* the window's buttons in the channel's three voices (Opus, the fact-checker, Argon), lit like the selection glow;
+   hovering them shows macOS's marks */
+.lights { display: flex; gap: 8px; }
+.lights .l { --c: var(--claude); display: grid; place-items: center; width: 12px; height: 12px; border-radius: 50%; background: var(--c);
+	box-shadow: 0 0 6px 1px color-mix(in srgb, var(--c) 70%, transparent), 0 0 16px 3px color-mix(in srgb, var(--c) 30%, transparent); }
+.lights .l:nth-child(2) { --c: var(--evidence); }
+.lights .l:nth-child(3) { --c: var(--gemini); }
+.lights svg { width: 10px; height: 10px; fill: none; stroke: #0c0f14b3; stroke-width: 1.3; stroke-linecap: round; opacity: 0; }
+.lights svg .fill { fill: #0c0f14b3; stroke: none; }
+.lights:hover svg { opacity: 1; }
+/* the index terminal's easter egg (site.js): the buttons type a command, a cow refuses it */
+.term .lights .l { cursor: pointer; }
+.egg .cow { margin: 2px 0 6px; font: inherit; line-height: 1.25; white-space: pre; font-variant-ligatures: none; } /* JetBrains Mono would join the legs into ⊢ */
+.egg .cow { --c: var(--claude); color: var(--c); text-shadow: 0 0 5px color-mix(in srgb, var(--c) 60%, transparent), 0 0 14px color-mix(in srgb, var(--c) 25%, transparent); } /* lit like the buttons */
+.egg .cow.evidence { --c: var(--evidence); }
+.egg .cow.gemini { --c: var(--gemini); }
+.egg .cow .claude, .egg .cow .gemini { color: var(--c); text-shadow: 0 0 5px color-mix(in srgb, var(--c) 60%, transparent), 0 0 14px color-mix(in srgb, var(--c) 25%, transparent); }
+.egg .cow .claude { --c: var(--claude); }
+.egg .cow span.gemini { --c: var(--gemini); }
+.bar em { margin-left: auto; margin-right: auto; font: 13px var(--mono); color: var(--muted); font-style: normal; }
+.screen { padding: 20px 22px 24px; font: 15px/1.9 var(--mono); overflow-x: auto; }
+/* the tree's glyphs and names keep their spacing; a long comment wraps under itself instead of running off */
+.row { display: flex; }
+.row .g { display: flex; flex: none; white-space: pre; }
+.row .item { display: flex; align-items: baseline; min-width: 0; }
+.row .item > :not(.cmt) { white-space: pre; flex: none; }
+.row .cmt { white-space: normal; min-width: 0; }
+.row.prompt, .row.blank { white-space: pre; display: block; }
+/* the branches, drawn so they join up: each cell is a character's worth of text (kept for copying, but
+   invisible), with its line through the middle of the first character and across at the middle of the first line */
+.t { --c: #4b5563; --x: calc(0.5ch - 0.75px); --y: calc(0.95em - 0.75px); font-style: normal; color: transparent; background-repeat: no-repeat; }
+.t.pipe { background-image: linear-gradient(var(--c), var(--c)); background-position: var(--x) 0; background-size: 1.5px 100%; }
+.t.tee, .t.elbow { background-image: linear-gradient(var(--c), var(--c)), linear-gradient(var(--c), var(--c)); background-position: var(--x) 0, 0.5ch var(--y); background-size: 1.5px 100%, 2.5ch 1.5px; }
+.t.elbow { background-size: 1.5px calc(0.95em + 0.75px), 2.5ch 1.5px; }
+.dir { color: var(--muted); font-weight: 600; } /* a folder: terminal grey */
+a.dir, .home a.dir { color: var(--evidence); } /* one you can open: the site's link colour, the fact-checker's neutral yellow */
+.file { color: var(--evidence); text-decoration: none; border-bottom: 1px dashed #f2c14e66; }
+.file:hover { border-bottom-style: solid; }
+/* a link in the terminal lights up when you point at it, like the window's buttons */
+.screen a:hover, .screen a:focus-visible { outline: none; text-shadow: 0 0 5px color-mix(in srgb, var(--evidence) 65%, transparent), 0 0 14px color-mix(in srgb, var(--evidence) 30%, transparent); }
+.cmt { color: #5f6875; margin-left: 2ch; }
+.row.cmt { margin-left: 0; }
+.dl { color: var(--muted); }
+.cursor { display: inline-block; width: 0.6em; height: 1.05em; vertical-align: -0.18em; background: var(--text); opacity: 0.85; animation: blink 1.08s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ── transcript ── */
+.crumbs { max-width: 1240px; margin: 0 auto; padding: 26px 28px 0; font: 14px var(--mono); color: var(--muted); }
+.crumbs:has(+ .home) { max-width: 980px; }
+.crumbs + .home { padding-top: 28px; }
+.crumbs a { text-decoration: none; border-bottom: 1px dashed transparent; }
+.crumbs a:hover { border-bottom-color: currentColor; }
+.crumbs .dir { color: var(--evidence); }
+.crumbs .file { color: var(--claude); border-top: 0; border-left: 0; border-right: 0; }
+.crumbs .here { color: var(--text); }
+.crumbs span.dir:not(.here) { color: var(--muted); } /* a folder with no page: not a link, so not link-blue */
+.crumbs .sep { color: #4b5563; padding: 0 1px; }
+.layout { max-width: 1240px; margin: 0 auto; padding: 24px 28px 100px; display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 48px; }
+.layout main { max-width: 820px; }
+.toc { position: sticky; top: 104px; align-self: start; font: 14px/1.5 var(--mono); max-height: calc(100vh - 128px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.toc .label { color: #5f6875; margin-bottom: 10px; }
+.toc .label::before { content: '## '; }
+.toc ol { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--line); }
+.toc li a { display: block; padding: 4px 0 4px 14px; color: var(--muted); text-decoration: none; }
+.toc li a:hover { color: #f2c14e8c; background: linear-gradient(90deg, #f2c14e08, transparent); } /* a dim version of where-you-are, so the two don't look alike */
+.toc li a:hover .topic { color: #f2c14e66; }
+.toc li.title a { color: var(--text); font-weight: 600; padding-bottom: 10px; }
+.toc .topic { display: block; font: 12.5px/1.35 var(--sans); color: #6b7480; margin: 1px 0 3px; }
+.toc li.active .topic { color: #f2c14ebb; }
+/* where you are: the fact-checks' yellow */
+.toc li.active a { color: var(--evidence); box-shadow: inset 2px 0 0 var(--evidence); margin-left: -1px; padding-left: 15px; background: linear-gradient(90deg, #f2c14e14, transparent); }
+.home .dir { text-decoration: none; }
+.home a.dir:hover { text-decoration: underline; }
+
+.sides { display: flex; flex-wrap: wrap; gap: 14px 34px; margin-bottom: 20px; font-size: 15px; }
+.side .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+.side.claude .dot { background: var(--claude); }
+.side.gemini .dot { background: var(--gemini); }
+.side.claude b { color: var(--claude); }
+.side.gemini b { color: var(--gemini); }
+.side .lab, .side .persona { color: var(--muted); }
+.intro { margin-top: 18px; }
+.intro details { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 18px; }
+.intro summary { cursor: pointer; font: 600 14px var(--mono); color: var(--muted); }
+
+.entry { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--muted); border-radius: 10px; padding: 18px 24px 8px; margin: 0 0 18px; }
+.entry.claude { border-left-color: var(--claude); }
+.entry.gemini { border-left-color: var(--gemini); }
+.entry.evidence { border-left-color: var(--evidence); background: var(--panel-2); }
+.entry.summary { background: var(--panel-2); }
+.entry.moderator { border-left-color: var(--moderator); }
+.entry header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 6px; }
+.entry .kind { font: 700 12px var(--sans); letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); }
+.entry .who { font-weight: 700; }
+.entry.claude .who { color: var(--claude); }
+.entry.gemini .who { color: var(--gemini); }
+.entry.evidence .who { color: var(--evidence); }
+.entry .persona { font-weight: 400; color: var(--muted); }
+.entry time { margin-left: auto; font: 13px var(--mono); color: #5f6875; }
+.verdict { font: 700 11px var(--sans); letter-spacing: 0.14em; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; border: 1px solid; }
+.verdict.true { color: var(--true); }
+.verdict.partly { color: var(--partly); }
+.verdict.false { color: var(--false); }
+.verdict.unclear { color: var(--muted); }
+.text h3 { font: 600 13px var(--mono); color: var(--muted); margin: 20px 0 4px; }
+.text h3::before { content: '## '; color: #4b5563; }
+.text p, .text ul, .text blockquote { margin: 0 0 14px; }
+.text ul { padding-left: 1.2em; }
+.text li { margin: 4px 0; }
+.text li::marker { color: #5f6875; }
+.text blockquote { border-left: 2px solid var(--line); padding: 2px 0 2px 16px; color: #cfc9be; font-style: italic; }
+.text a { color: var(--evidence); text-decoration: none; word-break: break-word; } /* every link is yellow */
+.text { overflow-wrap: anywhere; }
+.text a:hover { text-decoration: underline; }
+.text code { font: 0.86em var(--mono); background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+.ref { font: 600 0.82em var(--mono); color: var(--evidence) !important; background: #f2c14e14; border: 1px solid #f2c14e40; border-radius: 4px; padding: 0 5px; }
+.ref::before { content: '🔎 '; font-size: 0.9em; }
+.ref.more::before { content: none; }
+
+/* ── the transcript page's tabs, fact-check markers, filters and preview ── */
+.tabs { display: none; }
+/* the tabs stay put as the page scrolls: level with the logo on a wide screen, under it where they'd collide */
+.tabbed .tabs { display: flex; gap: 4px; margin: 0 0 26px; padding-top: 6px; border-bottom: 1px solid var(--line); font: 600 14px var(--mono);
+	position: sticky; top: 88px; z-index: 5; background: var(--bg); }
+.tabbed .tabs:not(.stuck)::before { display: none; }
+.tabbed .tabs::before { content: ''; position: absolute; z-index: -1; left: -24px; right: -24px; top: -88px; bottom: 0; background: var(--bg); } /* nothing shows above or beside them, a lit card's glow included */
+.tabbed { scroll-padding-top: 152px; }
+@media (min-width: 1340px) {
+	.tabbed .tabs { top: 18px; }
+	.tabbed .tabs::before { top: -18px; }
+	.tabbed { scroll-padding-top: 90px; }
+}
+/* coloured like the contents: grey, a dim yellow on hover, yellow where you are */
+.tabbed .tabs { flex-wrap: nowrap; }
+.tabs > a, .tabs > button, .listen .go { white-space: nowrap; flex: none; } /* not the listen menu's choices: they wrap */
+.tabs a { padding: 9px 16px; color: var(--muted); text-decoration: none; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; margin-bottom: -1px; }
+.tabs a:hover { color: #f2c14e8c; background: linear-gradient(#f2c14e08, transparent); }
+.tabs a[aria-selected="true"] { color: var(--evidence); background: linear-gradient(#f2c14e1c, #f2c14e08); border-color: #f2c14e80; box-shadow: inset 0 2px 0 var(--evidence); cursor: default; }
+.tabs a[aria-selected="true"]::before { content: '> '; }
+.tabs .n, .filters .n { color: var(--muted); font-weight: 400; }
+.panel[hidden] { display: none; }
+/* listening: a speaker button in each card's bottom right corner, in its speaker's colour; its ring fills as it
+   plays, and the card playing is lit like the window's buttons */
+.entry { position: relative; }
+.entry:has(> .say) { padding-bottom: 40px; }
+.entry:not(.open):has(> .text > .fold:first-child):has(> .say) { padding-bottom: 8px; } /* minimised: the button sits on the "full response" row */
+.entry:not(.open):has(> .text > .fold:first-child) > .say { bottom: 14px; }
+.fold { position: relative; max-width: calc(100% - 44px); }
+.say { --c: var(--narrator); --p: 0; position: absolute; right: 12px; bottom: 10px; width: 30px; height: 30px; padding: 0; display: grid; place-items: center;
+	border: 0; border-radius: 50%; cursor: pointer; color: var(--c); background: conic-gradient(var(--c) calc(var(--p) * 360deg), #ffffff1a 0) border-box; }
+.say::before { content: ''; position: absolute; inset: 1.5px; border-radius: 50%; background: var(--panel); }
+.entry.evidence .say, .peek .say { --c: var(--evidence); }
+.entry.claude .say { --c: var(--claude); }
+.entry.gemini .say { --c: var(--gemini); }
+.say svg { position: relative; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.say .spk { fill: currentColor; stroke: none; }
+.say .bars, .say[aria-pressed="true"] .spk, .say[aria-pressed="true"] .wave { display: none; }
+.say[aria-pressed="true"] .bars { display: inline; stroke-width: 2.6; }
+.say:hover::before { background: color-mix(in srgb, var(--c) 12%, var(--panel)); }
+.entry.speaking { --c: var(--narrator); box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent), 0 0 18px 2px color-mix(in srgb, var(--c) 22%, transparent); }
+.entry.evidence.speaking { --c: var(--evidence); }
+.entry.claude.speaking { --c: var(--claude); }
+.entry.gemini.speaking { --c: var(--gemini); }
+.entry.speaking .say { box-shadow: 0 0 6px 1px color-mix(in srgb, var(--c) 70%, transparent), 0 0 16px 3px color-mix(in srgb, var(--c) 30%, transparent); }
+/* folded turns: the button sits where the folded text would appear */
+.fold { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; margin: 2px 0 14px; padding: 0; background: none; border: 0; cursor: pointer; text-align: left; font: 600 13px var(--mono); color: var(--evidence); }
+.fold:hover .to-open, .fold:hover .to-shut { text-decoration: underline; }
+.fold .secs { font-weight: 400; color: #5f6875; }
+.fold .to-shut, .entry.open .fold .to-open, .entry.open .fold .secs { display: none; }
+.entry.open .fold .to-shut { display: inline; }
+.tabs .all { margin: 0 0 0 6px; align-self: center; padding: 4px 10px; font: 600 13px var(--mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+.tabs .all:hover { color: #f2c14e8c; border-color: #f2c14e50; }
+[data-tab="checks"] .tabs .all, [data-tab="checks"] .tabs .listen { display: none; }
+/* listening through the transcript: "▶ listen" opens the choice of a quick or a full listen */
+.listen { position: relative; margin-left: auto; align-self: center; }
+.listen .go { padding: 4px 10px; font: 600 13px var(--mono); color: var(--evidence); background: none; border: 1px solid #f2c14e60; border-radius: 6px; cursor: pointer; }
+.listen .go:hover { background: #f2c14e12; }
+.listen .menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 6; width: 300px; padding: 6px; background: var(--panel-2); border: 1px solid #f2c14e55; border-radius: 10px; box-shadow: 0 14px 40px #000a; }
+.listen .menu button { display: block; width: 100%; padding: 8px 10px; text-align: left; font: 13px var(--mono); color: var(--muted); background: none; border: 0; border-radius: 6px; cursor: pointer; }
+.listen .menu button:hover { background: #f2c14e12; color: var(--text); }
+.listen .menu b { color: var(--evidence); }
+.listen .menu span { display: block; margin-top: 2px; font: 12.5px/1.4 var(--sans); color: #6b7480; }
+/* the player bar along the bottom, once something's playing: coloured by who's speaking */
+.player { --c: var(--narrator); position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--panel-2); border-top: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
+	box-shadow: 0 -6px 24px #0008, 0 -1px 12px color-mix(in srgb, var(--c) 18%, transparent); font: 13px var(--mono); }
+.player[data-c="claude"] { --c: var(--claude); }
+.player[data-c="gemini"] { --c: var(--gemini); }
+.player[data-c="evidence"] { --c: var(--evidence); }
+.player .in { max-width: 1240px; margin: 0 auto; padding: 10px 28px; display: flex; align-items: center; gap: 10px; }
+.player button { font: inherit; color: var(--muted); background: none; border: 0; padding: 4px 6px; border-radius: 6px; cursor: pointer; }
+.player button:hover { color: var(--text); background: #ffffff0d; }
+.player svg { display: block; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.player .prev path:last-child, .player .next path:last-child, .player .play { fill: currentColor; stroke-width: 1; }
+.player .toggle .play, .player .toggle.paused .pause { display: none; }
+.player .toggle.paused .play { display: inline; }
+.player .toggle { display: grid; place-items: center; }
+.player .toggle { width: 34px; height: 34px; border-radius: 50%; color: var(--c); border: 1.5px solid var(--c); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--c) 45%, transparent); }
+.player .what { color: var(--c); font-weight: 600; max-width: 30ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player .scrub { --p: 0; flex: 1; min-width: 80px; height: 4px; appearance: none; -webkit-appearance: none; border-radius: 2px; cursor: pointer;
+	background: linear-gradient(90deg, var(--c) calc(var(--p) * 100%), var(--line) 0); }
+.player .scrub::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: var(--c); box-shadow: 0 0 6px var(--c); }
+.player .scrub::-moz-range-thumb { width: 13px; height: 13px; border: 0; border-radius: 50%; background: var(--c); box-shadow: 0 0 6px var(--c); }
+.player .time { color: #6b7480; white-space: nowrap; }
+.player .mode { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.player .mode button { border-radius: 0; padding: 3px 9px; }
+.player .mode button[aria-pressed="true"] { color: var(--evidence); background: #f2c14e18; }
+body.with-player { padding-bottom: 64px; }
+@media (max-width: 860px) {
+	.player .in { flex-wrap: wrap; padding: 8px 12px; gap: 6px 8px; }
+	.player .scrub { order: 9; flex-basis: 100%; }
+	.player .what { flex: 1; max-width: none; }
+	.player .time { display: none; }
+	body.with-player { padding-bottom: 104px; }
+}
+.check-line.speaking { border-style: solid; border-color: #f2c14e90; box-shadow: 0 0 14px 1px #f2c14e30; }
+.kicker a { color: var(--evidence); text-decoration: none; }
+/* a fact-check in the transcript: one line where it landed, opening the card as a preview */
+.check-line { display: flex; align-items: baseline; gap: 10px; margin: -6px 0 18px; padding: 8px 14px; border: 1px dashed #f2c14e40; border-left: 3px solid var(--evidence); border-radius: 8px; background: #f2c14e08; color: var(--muted); text-decoration: none; font-size: 15px; line-height: 1.45; }
+.check-line:hover { background: #f2c14e12; border-color: #f2c14e70; }
+.check-line .num { font: 600 13px var(--mono); color: var(--evidence); white-space: nowrap; }
+.check-line .num::before { content: '🔎 '; }
+.check-line .verdict { flex-shrink: 0; font-size: 10px; padding: 1px 6px; }
+.check-line .claim { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b9b3a9; }
+.by.claude { color: var(--claude); }
+.by.gemini { color: var(--gemini); }
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -6px 0 22px; font: 13px var(--mono); }
+.filters { gap: 8px 16px; }
+.filters .grp { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.filters .lbl { color: #5f6875; margin-right: 4px; }
+.filters button { font: inherit; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+.filters button:hover { border-color: #f2c14e60; }
+.filters button.empty { opacity: 0.4; } /* nothing to show with the other filter as it is */
+.filters button[aria-pressed="true"] { color: var(--text); border-color: var(--evidence); background: #f2c14e14; }
+.gist { margin: 4px 0 16px; padding: 10px 14px; border-radius: 8px; background: #f2c14e0d; border: 1px solid #f2c14e2e; line-height: 1.55; }
+.gist .lbl { display: block; font: 600 11px var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--evidence); margin-bottom: 3px; }
+.text blockquote code { font-style: normal; font-size: 0.78em; word-break: break-all; background: none; padding: 0; }
+.checks-note { margin: -4px 0 18px; font-size: 15px; }
+.panel .none { color: var(--muted); font: 14px var(--mono); }
+.entry .back { display: inline-block; margin: 0 0 10px; font: 13px var(--mono); color: var(--evidence); text-decoration: none; }
+.entry .back:hover { text-decoration: underline; }
+@keyframes flash { from { box-shadow: 0 0 0 2px var(--evidence); } to { box-shadow: 0 0 0 2px transparent; } }
+.flash { animation: flash 1.4s ease-out; }
+/* the preview: a copy of the card, beside the link with a mouse, a sheet from the bottom on touch */
+.peek { position: fixed; z-index: 30; width: min(540px, calc(100vw - 32px)); max-height: min(60vh, 520px); overflow-y: auto; display: none; background: var(--panel-2); border: 1px solid #f2c14e55; border-radius: 10px; box-shadow: 0 14px 40px #000a; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.peek.on { display: block; }
+.peek .entry { margin: 0; border: 0; border-left: 3px solid var(--evidence); border-radius: 10px 10px 0 0; font-size: 15.5px; }
+.peek-foot { position: sticky; bottom: 0; display: flex; justify-content: space-between; align-items: center; padding: 8px 14px 8px 24px; background: var(--panel); border-top: 1px solid var(--line); font: 13px var(--mono); }
+.peek-foot a { color: var(--evidence); text-decoration: none; }
+.peek-foot a:hover { text-decoration: underline; }
+.peek-foot button { font: inherit; color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 5px; padding: 1px 8px; cursor: pointer; }
+.peek.sheet { left: 0 !important; right: 0; bottom: 0; top: auto !important; width: auto; max-height: 72vh; border-radius: 14px 14px 0 0; border-width: 1px 0 0; }
+.peek.sheet .entry { border-radius: 14px 14px 0 0; }
+
+/* the credit, as in the videos' end credits */
+.credit { position: relative; max-width: 1240px; margin: 0 auto; padding: 0 28px 40px; text-align: center; font: 13px var(--mono); color: #5f6875; }
+
+/* ── narrow screens ── */
+@media (max-width: 860px) {
+	body { font-size: 14px; } /* mono is wide: keep enough words on a line */
+	.layout { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 16px 16px 80px; }
+	.toc { position: static; max-height: none; }
+	.toc ol { display: flex; flex-wrap: wrap; gap: 6px; border: 0; }
+	.toc li a { padding: 3px 10px; border: 1px solid var(--line); border-radius: 6px; }
+	.toc li.title { flex-basis: 100%; }
+	.toc li.title a { border: 0; padding: 0 0 4px; }
+	.toc .topic { display: none; } /* chips stay short on a phone */
+	.toc li.active a { box-shadow: none; margin-left: 0; padding-left: 10px; border-color: #f2c14e80; }
+	.home, .crumbs { padding-left: 16px; padding-right: 16px; }
+	/* a phone has no margin to float in: a full-width bar */
+	.top { top: 0; left: 0; right: 0; padding: 8px 8px; background: var(--bg); border-bottom: 1px solid var(--line); }
+	.brand { padding: 4px 8px; }
+	body { padding-top: 64px; }
+	html { scroll-padding-top: 76px; }
+	.tabbed { scroll-padding-top: 146px; }
+	.tabbed .tabs { top: 85px; gap: 2px; font-size: 12.5px; } /* the header bar is 85px tall here */
+	.tabs a { padding: 8px 10px; }
+	.tabs .long { display: none; } /* "checks", "expand": short labels so the bar fits a phone in one row */
+	.listen .go, .tabs .all { padding: 4px 8px; font-size: 12.5px; }
+	.listen .menu { width: min(300px, calc(100vw - 32px)); }
+	/* the contents fold to one line until opened */
+	.tabbed .toc .label { cursor: pointer; display: inline-block; padding: 4px 0; }
+	.tabbed .toc .label::after { content: ' ▸'; color: var(--evidence); }
+	.tabbed .toc.open .label::after { content: ' ▾'; }
+	.tabbed .toc:not(.open) ol { display: none; }
+	.tabbed .tabs::before { top: -85px; left: -16px; right: -16px; }
+	.entry { padding: 16px 16px 6px; }
+	.screen { font-size: 13px; padding: 16px; }
+	/* no room beside the names on a phone: each comment takes its own line, indented under the tree */
+	.row .item { flex-wrap: wrap; }
+	.row .cmt { flex-basis: 100%; margin-left: 0; }
+	.row.cmt { margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html { scroll-behavior: auto; }
+	.cursor { animation: none; }
+}
+
+/* ── selected text takes the colour of whose words it is; everything else, the fact-checks' yellow ── */
+/* solid, like a highlighter pen: the side's full colour with dark text, no glow */
+::selection { background: var(--evidence); color: var(--bg); }
+.entry.claude ::selection { background: var(--claude); color: var(--bg); }
+.entry.gemini ::selection { background: var(--gemini); color: var(--bg); }
+/* the glow around a selection (site.js): shadows only, outside each line's box, so the text stays clear */
+.glow-layer { position: fixed; inset: 0; pointer-events: none; z-index: 4; } /* under the pinned tabs, so text scrolled beneath them doesn't glow through */
+.glow-box { position: fixed; border-radius: 2px; --c: var(--evidence); box-shadow: 0 0 8px 1px color-mix(in srgb, var(--c) 70%, transparent), 0 0 22px 4px color-mix(in srgb, var(--c) 30%, transparent); }
+.glow-box.claude { --c: var(--claude); }
+.glow-box.gemini { --c: var(--gemini); }
+.text .by.claude { color: var(--claude); }
+.text .by.gemini { color: var(--gemini); }
+
+/* ── a section's heading above its cards ── */
+.section { margin: 44px 0 16px; display: flex; flex-direction: column; gap: 4px; }
+.section .num { font: 600 14px var(--mono); color: var(--muted); }
+.section .topic { font: 600 26px/1.2 var(--sans); color: var(--text); }
+
+/* ── inline markers ── */
+.dot { display: inline-block; width: 0.62em; height: 0.62em; border-radius: 50%; vertical-align: 0.04em; margin-right: 0.3em; background: var(--muted); }
+.dot.claude { background: var(--claude); }
+.dot.gemini { background: var(--gemini); }
+.dot.moderator { background: var(--moderator); }
+.text h4 { font: 600 17px/1.45 var(--sans); margin: 18px 0 8px; }
+@media (max-width: 860px) { .section .topic { font-size: 22px; } }
+.text p.label { margin: 0 0 6px; }
+.text p.label span { font: 600 12px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-right: 6px; }
+.text .meta { font: 13px/1.6 var(--mono); color: #6b7480; margin: 0 0 4px; }
+.text .meta + :not(.meta) { margin-top: 14px; }
+
+/* the smallest phones: a little tighter still, so the tabs keep to one row */
+@media (max-width: 380px) {
+	.tabbed .tabs { font-size: 12px; }
+	.tabs a { padding: 8px 7px; }
+	.listen .go, .tabs .all { padding: 4px 6px; font-size: 12px; }
+}
+@media (max-width: 340px) {
+	.tabs .all { display: none; } /* no room: each card still has its own "full response" */
+}
