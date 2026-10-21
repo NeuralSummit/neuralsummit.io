@@ -1002,6 +1002,16 @@ def main():
         for d in DEBATES.iterdir():
             if d.name in SPEECH:
                 voice_missing(d)
+                # and drop the audio of words no card says any more (a change of wording, or of how cards are voiced);
+                # only here, once their replacements are made, so a plain build never leaves a card silent
+                used = set(SPEECH[d.name])
+                for f in (d / "site-voice").glob("*.m4a"):
+                    if not f.name.startswith("listen-") and f.stem not in used:
+                        f.unlink()
+                lengths = d / "site-voice/durations.json"
+                if lengths.exists():
+                    lengths.write_text(json.dumps({k: v for k, v in json.loads(lengths.read_text()).items() if k in used},
+                                                  indent=0))
         SPEECH.clear()
     build()
 
