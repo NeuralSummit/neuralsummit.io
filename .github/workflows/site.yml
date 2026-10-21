@@ -52,7 +52,8 @@ jobs:
           name: site
           path: test-deploy
       - name: Never cached, never indexed
-        run: printf '/*\n  X-Robots-Tag: noindex\n  Cache-Control: no-store\n' > test-deploy/_headers
+        run: |
+          printf '/*\n  X-Robots-Tag: noindex\n  Cache-Control: no-store\n' > test-deploy/_headers
       - name: Upload to the test site
         run: npx --yes wrangler@4.148.0 deploy --config wrangler.jsonc
         env:
