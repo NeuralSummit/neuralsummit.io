@@ -770,11 +770,29 @@ onPage((signal) => {
 		if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(ev.key) && !ev.target.closest?.('input, button')) follow = false;
 	});
 
+	// The next cards' audio is fetched into memory while this one plays, so a card ending never waits on the network.
+	// With the phone locked, Android (Samsung's especially) cuts a page's network and timers in any gap where nothing
+	// plays; a next card still loading then stalled or errored, and the listen stopped.
+	const ready = new Map(); // src → its in-memory copy (a blob: URL), once fetched
+	const fetching = new Map(); // src → the fetch under way
+	const ahead = () => {
+		const want = new Set();
+		for (let i = at, n = 0; list[i] && n < 5; i++) if (i === at || !skip(list[i])) want.add(list[i].src), n++;
+		for (const s of want) {
+			if (ready.has(s) || fetching.has(s)) continue;
+			fetching.set(s, fetch(s).then((r) => (r.ok ? r.blob() : null)).then((b) => {
+				if (b && fetching.has(s)) ready.set(s, URL.createObjectURL(b));
+			}).catch(() => {}).finally(() => fetching.delete(s)));
+		}
+		for (const [s, u] of ready) if (!want.has(s)) ready.delete(s), URL.revokeObjectURL(u); // the ones gone by
+		for (const s of fetching.keys()) if (!want.has(s)) fetching.delete(s);
+	};
 	const playAt = (i) => {
 		at = i;
 		const item = now();
-		player.src = item.src;
+		player.src = ready.get(item.src) || item.src; // the copy in memory if it's there: no network at all
 		player.play().catch(() => {});
+		ahead();
 		show();
 		mark();
 		bring();
@@ -799,6 +817,7 @@ onPage((signal) => {
 		player.pause();
 		at = -1;
 		list = [];
+		ahead(); // lets go of the copies in memory
 		mark();
 		show();
 	};
@@ -825,7 +844,7 @@ onPage((signal) => {
 		const c = el(now());
 		if (c) bringTo(c);
 	});
-	for (const b of bar.querySelectorAll('.mode button')) b.addEventListener('click', () => ((mode = b.dataset.mode), show()));
+	for (const b of bar.querySelectorAll('.mode button')) b.addEventListener('click', () => ((mode = b.dataset.mode), ahead(), show()));
 	scrub.addEventListener('input', () => {
 		dragging = true;
 		player.currentTime = +scrub.value;
@@ -864,9 +883,22 @@ onPage((signal) => {
 	// another page swapped in (the nav at the end): light the card being read, if it's there
 	addEventListener('pagestart', () => (mark(), show()));
 	player.addEventListener('ended', () => step(1));
-	player.addEventListener('error', () => now() && stop());
-	player.addEventListener('play', () => (show(), mark()));
-	player.addEventListener('pause', () => (show(), mark()));
+	player.addEventListener('error', () => {
+		// a bad in-memory copy: fetch the file itself instead; only if that fails too does the listen stop
+		const item = now();
+		if (!item) return;
+		if (player.src.startsWith('blob:')) {
+			ready.delete(item.src);
+			const t = player.currentTime;
+			player.src = item.src;
+			player.currentTime = t;
+			player.play().catch(() => {});
+		} else stop();
+	});
+	// the lock screen's play/pause shows what's actually happening, and Android keeps the notification while it's "playing"
+	const state = (s) => 'mediaSession' in navigator && (navigator.mediaSession.playbackState = s);
+	player.addEventListener('play', () => (show(), mark(), state('playing')));
+	player.addEventListener('pause', () => (show(), mark(), state(now() ? 'paused' : 'none')));
 	player.addEventListener('timeupdate', () => (tick(), keep()));
 	player.addEventListener('loadedmetadata', tick);
 	if ('mediaSession' in navigator) {
