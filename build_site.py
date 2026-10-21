@@ -240,7 +240,7 @@ def folded(lines, refs, kind="", who=""):
 
 # ── listening: each card voiced ahead of time with the videos' Kokoro voices ─────────────────────────────────────
 # A card's words go through the video's own speech prep (debate.py's speakable(): no URLs or machine lines, names
-# respelt, years said properly; build.py's sentence splitter and dash beats) and debate-video's voice.py, in the voice
+# respelt, years said properly; build.py's sentence splitter) and debate-video's voice.py, in the voice
 # of whoever wrote them. The audio is cached per debate in site-voice/<key>.m4a, the key hashing the voice and the
 # words, so only new or changed cards are voiced: `build_site.py --voice` voices what's missing (slow: about 3 minutes
 # per 1,000 words, on the CPU, free); a plain build uses what's there, and a card with no audio has no speaker button.
@@ -266,6 +266,71 @@ def video_build():
     return _vb
 
 
+# How the site's cards are paced (the videos keep their own). Kokoro leaves about 60 ms at a comma and ignores brackets,
+# so "its own innovations (Massive, Gollum)" came out as "innovations massive Gollum"; and the same short gap after
+# every sentence, bullet and paragraph read like a machine gun. Voicing a sentence in pieces with silence between made
+# it worse: each piece was said as a sentence of its own ("Return... of the Jedi", "where the scow is stowed"). So each
+# sentence is said in one go, with brackets and dashes as an inline dash, and the quiet Kokoro leaves after a comma or
+# a dash is lengthened in place (voice.py's breathe(), with the timed model below), an aside said a little quieter
+# (hush()); then real silence (seconds) after each sentence, and a longer one after a line (a paragraph or a bullet).
+PACE = {"sentence": 0.45, "line": 0.8, "aside": 0.4, "comma": 0.25, "hush": 0.7}  # hush: an aside's volume
+SPEED = {"bf_emma": 0.96, "am_michael": 0.96, "bm_george": 0.96}  # a touch slower than Kokoro's 1.0, which hurried
+ASIDE = "‖"  # a dash or bracket, kept through speakable() (which makes dashes commas), said as a dash
+DASHES = re.compile(r"\s*—\s*|\s+–\s+")  # not "1977–1983" or "2–1"
+QUOTES = re.compile(r'["“”]')  # read out, they're a stop either side of the word ("obviously" better)
+
+
+def pauses():
+    """The silence voice.py tops each mark up to, inside a sentence."""
+    return {",": PACE["comma"], "—": PACE["aside"], ";": PACE["aside"], ":": PACE["aside"]}
+
+
+def spoken(x):
+    """A sentence as Kokoro gets it, and its asides. Brackets, and dashes in pairs, are said as dashes, and what's
+    between them is an aside: [n, m] means from the sentence's nth dash to its mth (None: to the end), which voice.py
+    says a little quieter, as a person drops their voice for a bracket. A lone dash is a break, not an aside. No quote
+    marks (read out, they're a stop either side of the word: "obviously" better), and no doubled-up punctuation where
+    a bracket closed before a comma or a full stop."""
+    dashes = x.count(ASIDE)
+    paired = dashes - dashes % 2
+    n = iter(range(dashes))
+    x = re.sub(ASIDE, lambda _: (" ⟨ ", " ⟩ ")[k % 2] if (k := next(n)) < paired else " ‖ ", x)
+    x = QUOTES.sub("", x.replace("(", " ⟨ ").replace(")", " ⟩ "))
+    x = re.sub(r"\s*,?\s*([⟨⟩‖])\s*,?\s*", r" \1 ", x)  # "question), both" -> "question — both"
+    x = re.sub(r"\s*[⟨⟩‖]\s*([.!?;:]|$)", r"\1", x)  # "(Massive, Gollum)." ends with the full stop, not a dash
+    x = re.sub(r"([.!?;:])\s*[⟨⟩‖]", r"\1", x)  # "(An aside.) Then" -> "An aside. Then"
+    x = re.sub(r"^\s*[⟨⟩‖]", "", x)
+    x = re.sub(r"([.!?])[.!?]+$", r"\1", x)  # 'not "obviously."' -> "not obviously."
+    asides, opened = [], None
+    for k, m in enumerate(re.findall(r"[⟨⟩‖]", x)):
+        if m == "⟨" and opened is None:
+            opened = k
+        elif m == "⟩" and opened is not None:
+            asides.append([opened, k])
+            opened = None
+    if opened is not None:
+        asides.append([opened, None])
+    return re.sub(r"\s+", " ", re.sub(r"[⟨⟩‖]", "—", x)).strip(), asides
+
+
+def timed_model():
+    """Kokoro's model with the length of every sound it makes as a second output (it's computed inside but not given
+    out), so voice.py knows where each comma falls. The audio is the same, sample for sample. Made once, from the
+    model the video skill downloads, next to it."""
+    vb = video_build()
+    src = vb.dbt.TTS_CACHE / vb.dbt.TTS_FILES["model"]
+    dst = src.with_name(src.stem + ".timed.onnx")
+    if not dst.exists():
+        print("making the timed Kokoro model (once)", flush=True)
+        make = ("import onnx, sys; m = onnx.load(sys.argv[1]); "
+                "m.graph.output.append(onnx.helper.make_tensor_value_info('duration', onnx.TensorProto.INT64, ['n'])); "
+                "m.graph.node.append(onnx.helper.make_node('Identity', ['/encoder/Gather_output_0'], ['duration'])); "
+                "onnx.save(m, sys.argv[2])")
+        if subprocess.run([str(vb.dbt.TTS_PYTHON), "-I", "-c", make, str(src), str(dst)]).returncode:
+            sys.exit(f"couldn't make the timed model (it needs onnx: {vb.dbt.TTS_PYTHON.parent}/pip install onnx)")
+    return dst
+
+
 def speech(d, voice, text):
     """Queue a card's words for voicing; returns its key."""
     raw = hashlib.sha1(json.dumps([voice, text]).encode()).hexdigest()[:16]
@@ -275,17 +340,23 @@ def speech(d, voice, text):
         return key
     vb = video_build()
     sents = []
-    for line in vb.dbt.speakable(text).splitlines():
+    for line in vb.dbt.speakable(DASHES.sub(f" {ASIDE} ", text)).splitlines():
         line = line.strip()
         if not line:
             continue
         if not re.search(r"[.!?:;]$", line):
             line += "."  # a bullet or a label line ends where it ends, not run into the next
+        n = len(sents)
         for x in vb.sentences(line):
-            parts = [q.strip() for q in vb.DASH.split(x) if q.strip()]
-            if parts:
-                sents.append({"text": x, "spoken": parts[0] if len(parts) == 1 else parts})
-    key = __import__("hashlib").sha1(json.dumps([voice, [x["spoken"] for x in sents]]).encode()).hexdigest()[:16]
+            if re.search(r"\w", x):
+                said, asides = spoken(x)
+                sents.append({"text": x.replace(ASIDE, "—"), "spoken": said, "voice": voice,
+                              "speed": SPEED.get(voice, 1.0), "pauses": pauses(),
+                              **({"asides": asides, "hush": PACE["hush"]} if asides else {}), "after": PACE["sentence"]})
+        if len(sents) > n:
+            sents[-1]["after"] = PACE["line"]  # the end of a paragraph or a bullet: a longer breath
+    key = hashlib.sha1(json.dumps([[x["voice"], x["speed"], x["spoken"], x["pauses"], x.get("asides"), x.get("hush"),
+                                    x["after"]] for x in sents]).encode()).hexdigest()[:16]
     SPEECH.setdefault(d.name, {})[key] = (voice, sents)
     KEYS.setdefault(d.name, {})[raw] = key
     return key
@@ -332,9 +403,8 @@ def voice_missing(d):
     (cache / "audio").mkdir(parents=True, exist_ok=True)
     jobs = [{"who": voice, "voice": voice, "file": f"audio/{k}.wav", "sentences": sents} for k, (voice, sents) in todo.items()]
     (cache / "audio/jobs.json").write_text(json.dumps(jobs))
-    r = subprocess.run([str(vb.dbt.TTS_PYTHON), "-I", str(vb.VOICE_WORKER), "--model",
-                        str(vb.dbt.TTS_CACHE / vb.dbt.TTS_FILES["model"]), "--voices",
-                        str(vb.dbt.TTS_CACHE / vb.dbt.TTS_FILES["voices"]), "--dir", str(cache), "--speed", "1.0"])
+    r = subprocess.run([str(vb.dbt.TTS_PYTHON), "-I", str(vb.VOICE_WORKER), "--model", str(timed_model()), "--voices",
+                        str(vb.dbt.TTS_CACHE / vb.dbt.TTS_FILES["voices"]), "--dir", str(cache)])
     if r.returncode:
         sys.exit("voicing failed")
     env = {"LD_LIBRARY_PATH": str(FFMPEG)}
