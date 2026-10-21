@@ -47,7 +47,8 @@ a { color: inherit; }
 .top { position: fixed; top: 16px; left: 20px; z-index: 10; }
 .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; padding: 6px 14px 6px 8px; border-radius: 12px; background: var(--bg); }
 body { padding-top: 88px; }
-.brand svg { display: block; }
+.brand svg { display: block; pointer-events: none; } /* its scanline rect and the sting spill past it (overflow: visible), and a mask
+   doesn't stop hits: without this, a tap on the tabs under the header on a phone went home. The brand's own box takes the clicks. */
 .lockup { display: flex; flex-direction: column; gap: 3px; }
 .brand .ps { font-size: 13px; color: #8d96a3; }
 /* the channel name, done like the logo's CRT: hard RGB fringes either side (no blur, no glow) and scanlines over
