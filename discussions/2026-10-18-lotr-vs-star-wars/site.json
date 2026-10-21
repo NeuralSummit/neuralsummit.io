@@ -1,0 +1,54 @@
+{
+  "_about": "For the transcripts site (~/debates/site/build_site.py). checks: a plain-English summary per fact-check, shown at the top of its card as ours, above the checker's own words (which stay unedited); 'claim' replaces the claim on the transcript's one-line marker when the checker's wording doesn't read well there; 'request' marks a lookup a side asked for rather than a claim, and is shown as one. A check run twice is '<id>-2'.",
+  "checks": {
+    "1": {
+      "summary": "Right on both counts. The Academy's own page confirms The Return of the King won all 11 Oscars it was up for. The trilogy's total, 17 wins from 30 nominations, comes from Wikipedia, and the numbers add up: 4 of 13, 2 of 6 and 11 of 11."
+    },
+    "2": {
+      "summary": "The 274 shooting days are confirmed by American Cinematographer magazine. The dates, October 1999 to December 2000, come from other sources rather than that article, which is why it's only 'partly' true. Nothing contradicts them: the article's own 'about 15 months' fits."
+    },
+    "3": {
+      "summary": "Right: on the American Film Institute's 2007 list of the 100 greatest American films, Star Wars is #13 and The Fellowship of the Ring is #50."
+    },
+    "4": {
+      "summary": "Right: The Empire Strikes Back isn't on the American Film Institute's 2007 list. The only Star Wars film on it is the original, at #13."
+    },
+    "5": {
+      "summary": "Right as far as the checker could tell: no HD or Blu-ray release of the unaltered 1977 cut was found. Two reasons for only 'partly': the source is Wikipedia, with no statement from Lucasfilm, and the 1977 cut did get one official release, in standard definition, as a bonus disc on a 2006 DVD. The checker also found a restored 1977 cut announced for cinemas in February 2027."
+    },
+    "7": {
+      "summary": "Right: all six Metacritic scores match. The Lord of the Rings films score 92, 87 and 94; the original Star Wars films 90, 82 and 58."
+    },
+    "6": {
+      "summary": "Right: all three original Star Wars films are in the US National Film Registry (added in 1989, 2010 and 2021), and The Fellowship of the Ring (added in 2021) is the only Lord of the Rings film. The source is Wikipedia's list, because the Library of Congress site blocked the checker, though the Library's own blog confirms the 2021 additions."
+    },
+    "8": {
+      "summary": "Half right. The original Star Wars films do have fewer than 26 reviews each on Metacritic (24, 25 and 24). But the Lord of the Rings films have 34, 39 and 41, not 38 to 42. And Metacritic was created in 1999 but only launched in January 2001, so '1999' is when work on it began, not when it went live."
+    },
+    "9": {
+      "summary": "Probably right, but no source says it outright. Go-motion is a kind of stop-motion where the model moves during each frame, giving it a natural motion blur. ILM credits Dragonslayer (1981) with leading to it. Wikipedia says it was first tried on a few shots in The Empire Strikes Back, while the AT-AT walkers were mainly ordinary stop-motion."
+    },
+    "10": {
+      "summary": "Right: The Return of the King won Best Film Editing at the 2004 Oscars."
+    },
+    "11": {
+      "summary": "Mostly right on both halves. In the novel, Gollum dances with the Ring and steps over the edge (this is from Wikipedia's summary, not Tolkien's own text). In the film, Gollum bites off Frodo's finger, they struggle over the Ring and both tumble off the ledge; Sam saves Frodo, and Gollum falls into the lava. The checker's one doubt was the claim's wording that Frodo 'lunges at' Gollum: its sources say they struggled, not who went for whom."
+    },
+    "12": {
+      "request": "the Rotten Tomatoes scores for all six films",
+      "summary": "Not a true-or-false check: Opus asked the checker to look up the scores, and it did. Rotten Tomatoes' critics' scores on 18 October 2026: The Fellowship of the Ring 91%, The Two Towers 95%, The Return of the King 94%; Star Wars 93%, The Empire Strikes Back 93%, Return of the Jedi 83%. The quote below is raw data from the Fellowship page, where the score is stored."
+    },
+    "13": {
+      "summary": "Right: Star Wars won 6 competitive Oscars plus a Special Achievement Award (for Ben Burtt's alien and robot voices), and The Fellowship of the Ring won 4. The source is Wikipedia."
+    },
+    "13-2": {
+      "summary": "The same claim, checked again, this time against the Academy's own pages, and it holds: Star Wars won 6 competitive Oscars plus a Special Achievement Award, and The Fellowship of the Ring won 4 of its 13 nominations. The checker labelled this run 'partly true', but its finding ends 'claim true', and nothing in it is wrong."
+    },
+    "14": {
+      "summary": "Better supported than the checker found. ILM did shoot effects for the original Star Wars films on VistaVision, a high-resolution film format. For the Lord of the Rings films being finished digitally at 2K resolution, the checker only found secondary sources, covering Fellowship. American Cinematographer's own article on The Two Towers confirms 2K scanning and digital grading for that film too; The Return of the King wasn't confirmed either way."
+    },
+    "15": {
+      "summary": "Right: in Empire magazine's 2008 poll of the 500 greatest films, The Empire Strikes Back was #3. The Lord of the Rings films were #24 (Fellowship), #34 (The Return of the King) and #54 (The Two Towers)."
+    }
+  }
+}

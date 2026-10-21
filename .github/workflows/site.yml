@@ -1,0 +1,73 @@
+# Build → test → (approve) → live. Every push to main builds the site, checks it, puts it on the private test site
+# (test.neuralsummit.io, behind Cloudflare Access) and then waits: the live step is the github-pages environment,
+# which needs the channel's human to press Approve (on GitHub or in its phone app) after checking the test site.
+# Actions are pinned to exact commits, not tags, so what runs can't change underneath.
+name: Build, test, publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# a newer push supersedes a run still waiting for approval
+concurrency:
+  group: site
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build the site
+        run: python3 build_site.py
+      - name: Leak check
+        env:
+          LEAK_PATTERNS: ${{ secrets.LEAK_PATTERNS }}
+        run: |
+          printf '%s\n' "$LEAK_PATTERNS" > "$RUNNER_TEMP/patterns.txt"
+          LEAK_PATTERNS_FILE="$RUNNER_TEMP/patterns.txt" python3 check_leaks.py public
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: site
+          path: public
+          retention-days: 7
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: public
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: test
+      url: https://test.neuralsummit.io
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: site
+          path: test-deploy
+      - name: Never cached, never indexed
+        run: printf '/*\n  X-Robots-Tag: noindex\n  Cache-Control: no-store\n' > test-deploy/_headers
+      - name: Upload to the test site
+        run: npx --yes wrangler@4.148.0 deploy --config wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  live:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

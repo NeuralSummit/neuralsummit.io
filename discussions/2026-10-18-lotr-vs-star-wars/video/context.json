@@ -1,0 +1,223 @@
+{
+  "debate": "2026-10-18-lotr-vs-star-wars",
+  "title": "LOTR vs Star Wars",
+  "mode": "opposing",
+  "people": {
+    "claude": {
+      "model": "Opus",
+      "lab": "Anthropic",
+      "persona": "Prestige film critic and repertory programmer",
+      "side": "A",
+      "position": "Peter Jackson's Lord of the Rings trilogy is clearly better filmmaking than the Star Wars films, in craft, consistency and narrative cohesion, and the gap is not close.",
+      "voice": "bf_emma"
+    },
+    "gemini": {
+      "model": "Argon",
+      "lab": "Google",
+      "persona": "Veteran VFX supervisor and cinema historian",
+      "side": "B",
+      "position": "Star Wars is the greater cinematic achievement; LOTR's superiority is far from obvious and probably false.",
+      "voice": "am_michael"
+    }
+  },
+  "narrator_voice": "af_heart",
+  "rounds": 10,
+  "statuses": [
+    {
+      "round": 1,
+      "gemini": "OPEN",
+      "claude": "OPEN"
+    },
+    {
+      "round": 2,
+      "gemini": "OPEN",
+      "claude": "OPEN"
+    },
+    {
+      "round": 3,
+      "gemini": "OPEN",
+      "claude": "OPEN"
+    },
+    {
+      "round": 4,
+      "gemini": "OPEN",
+      "claude": "OPEN"
+    },
+    {
+      "round": 5,
+      "gemini": "OPEN",
+      "claude": "OPEN"
+    },
+    {
+      "round": 6,
+      "gemini": "OPEN",
+      "claude": "OPEN"
+    },
+    {
+      "round": 7,
+      "gemini": "OPEN",
+      "claude": "OPEN"
+    },
+    {
+      "round": 8,
+      "gemini": "OPEN",
+      "claude": "OPEN"
+    },
+    {
+      "round": 9,
+      "gemini": "OPEN",
+      "claude": "OPEN"
+    },
+    {
+      "round": 10,
+      "gemini": "RESTED",
+      "claude": "RESTED"
+    }
+  ],
+  "evidence": [
+    {
+      "id": 1,
+      "claim": "The Return of the King won all 11 Academy Awards it was nominated for, and the three Lord of the Rings films won 17 Oscars from 30 nominations in total.",
+      "url": "https://www.oscars.org/node/52831",
+      "quote": "The Lord of the Rings: The Return of the King was nominated for 11 awards and won them all.",
+      "finding": "True for 11/11 (Academy's own page); the 17 wins from 30 nominations trilogy total is stated only on Wikipedia (secondary) but is consistent with 4/13 + 2/6 + 11/11.",
+      "not_found": false,
+      "verdict": "TRUE"
+    },
+    {
+      "id": 2,
+      "claim": "Principal photography for the Lord of the Rings trilogy lasted about 274 shooting days, from October 1999 to December 2000.",
+      "url": "https://theasc.com/articles/lord-of-the-rings-fellowship-of-the-ring",
+      "quote": "the three films entailed 274 days of principal photography encompassing 600 scenes",
+      "finding": "Partly true: 274 days is confirmed by American Cinematographer (ASC); start 11 Oct 1999 and end 22 Dec 2000 come from Wikipedia/New Line press release, while Lesnie in the same article says about 15 months, so the Oct 1999-Dec 2000 span is not stated by the ASC piece.",
+      "not_found": false,
+      "verdict": "PARTLY TRUE"
+    },
+    {
+      "id": 3,
+      "claim": "On the American Film Institute's 2007 100 Years...100 Movies list, Star Wars (1977) ranked #13 and The Fellowship of the Ring (2001) ranked #50.",
+      "url": "https://www.afi.com/afis-100-years-100-movies-10th-anniversary-edition/",
+      "quote": "13. Star Wars (1977)",
+      "finding": "TRUE: AFI's own 2007 10th Anniversary list page has Star Wars at #13 and The Lord of the Rings: The Fellowship of the Ring (2001) at #50 (Wikipedia table corroborates both ranks).",
+      "not_found": false,
+      "verdict": "TRUE"
+    },
+    {
+      "id": 4,
+      "claim": "The Empire Strikes Back does not appear on the American Film Institute's 2007 100 Years...100 Movies list.",
+      "url": "https://www.afi.com/afis-100-years-100-movies-10th-anniversary-edition/",
+      "quote": "13. Star Wars",
+      "finding": "TRUE: AFI's official 2007 10th Anniversary list (fetched in full, entries 1-100, Star Wars at #13) contains no The Empire Strikes Back entry.",
+      "not_found": false,
+      "verdict": "TRUE"
+    },
+    {
+      "id": 5,
+      "claim": "The unaltered 1977 theatrical cut of Star Wars has never received an official HD or Blu-ray release by Lucasfilm.",
+      "url": "https://en.wikipedia.org/wiki/Star_Wars_(film)",
+      "quote": "and were not re-transferred using modern video standards",
+      "finding": "PARTLY/likely true on HD: no HD/Blu-ray of the 1977 cut found (2011 Blu-ray carried altered versions); but the 2006 limited-edition DVD officially included the unaltered theatrical version as an SD bonus disc from 1993 LaserDisc masters, so 'never any official release' would be false; source is Wikipedia (secondary), no Lucasfilm primary statement found; a restored 1977 cut is announced for theaters Feb 2027.",
+      "not_found": false,
+      "verdict": "PARTLY TRUE"
+    },
+    {
+      "id": 7,
+      "claim": "On Metacritic, The Fellowship of the Ring, The Two Towers and The Return of the King score 92, 87 and 94, while Star Wars (1977), The Empire Strikes Back and Return of the Jedi score 90, 82 and 58.",
+      "url": "https://www.metacritic.com/movie/star-wars-episode-vi---return-of-the-jedi/",
+      "quote": "Metascore Mixed or Average Based on 24 Critic Reviews 58",
+      "finding": "True: Metacritic pages show Fellowship 92, Two Towers 87, Return of the King 94, Star Wars (A New Hope) 90, Empire 82, Return of the Jedi 58 (each fetched separately; quote is from the Jedi page).",
+      "not_found": false,
+      "verdict": "TRUE"
+    },
+    {
+      "id": 6,
+      "claim": "Star Wars (1989), The Empire Strikes Back (2010), and Return of the Jedi (2021) are all in the U.S. National Film Registry, whereas The Fellowship of the Ring (2021) is the only Lord of the Rings film inducted.",
+      "url": "https://en.wikipedia.org/wiki/National_Film_Registry",
+      "quote": "The Lord of the Rings: The Fellowship of the Ring",
+      "finding": "True (secondary source; loc.gov returned 403): registry list shows Star Wars (1977) inducted 1989, Empire Strikes Back (1980) 2010, Return of the Jedi (1983) 2021, and Fellowship of the Ring (2001) 2021 as the only Lord of the Rings row found; LOC blog (blogs.loc.gov/now-see-hear/2021/12/) confirms Return of the Jedi and Lord of the Rings in the 2021 class; no Bakshi/Two Towers/Return of the King row seen in the parts of the page read.",
+      "not_found": false,
+      "verdict": "TRUE"
+    },
+    {
+      "id": 8,
+      "claim": "Metacritic launched in 1999 and aggregates fewer than 26 reviews each for the 1977\u20131983 Star Wars films, compared to 38 to 42 reviews for the Lord of the Rings films.",
+      "url": "https://www.metacritic.com/movie/the-lord-of-the-rings-the-fellowship-of-the-ring/",
+      "quote": "Based on 34 Critic Reviews",
+      "finding": "Partly true: Metacritic review counts are SW 24/25/24 (<26, true) but LOTR are 34/39/41 (Fellowship 34 is outside 38-42); also Wikipedia says Metacritic launched January 2001, not 1999 (some sources say July 1999)",
+      "not_found": false,
+      "verdict": "PARTLY TRUE"
+    },
+    {
+      "id": 9,
+      "claim": "The AT-AT walkers in The Empire Strikes Back were animated mainly with traditional stop-motion, and go-motion was first used extensively in Dragonslayer (1981).",
+      "url": "https://www.ilm.com/?p=805",
+      "quote": "The film inspired the development of the Go-Motion process",
+      "finding": "Partly true: ILM says Dragonslayer inspired Go-Motion's development, but Wikipedia (secondary) says Tippett co-developed go motion for Empire, tested on some tauntaun/AT-AT shots, while AT-ATs were mainly filmed with stop-motion, so 'first used extensively in Dragonslayer' is plausible but not explicitly confirmed",
+      "not_found": false,
+      "verdict": "PARTLY TRUE"
+    },
+    {
+      "id": 10,
+      "claim": "The Return of the King won the Academy Award for Best Film Editing.",
+      "url": "https://www.oscars.org/oscars/ceremonies/2004",
+      "quote": "The Lord of the Rings: The Return of the King",
+      "finding": "True: Academy's 2004 (76th) ceremony page lists it as Film Editing winner (Jamie Selkirk)",
+      "not_found": false,
+      "verdict": "TRUE"
+    },
+    {
+      "id": 11,
+      "claim": "In Tolkien's novel, Gollum falls into the Crack of Doom on his own while dancing, whereas in Jackson's 2003 film, Frodo lunges at Gollum and both fall over the ledge while grappling.",
+      "url": "https://en.wikipedia.org/wiki/The_Lord_of_the_Rings:_The_Return_of_the_King",
+      "quote": "Gollum bites off his finger and reclaims the Ring, leading to a struggle before they tumble off the ledge.",
+      "finding": "Partly settled: film side true (Gollum attacks Frodo, they struggle and tumble off the ledge together; Wikipedia says Gollum then falls into the lava with the Ring). Novel side true per Wikipedia's Gollum page: 'Gloating over his prize and dancing madly, he steps over the edge and falls into the Crack of Doom' (secondary source, not Tolkien's text). Caveat: the film has Frodo hanging on the ledge and Gollum falling, so 'Frodo lunges at Gollum' is from a retailer-grade summary; Wikipedia says Gollum bites the finger and reclaims the Ring first.",
+      "not_found": false,
+      "verdict": "PARTLY TRUE"
+    },
+    {
+      "id": 12,
+      "claim": "On Rotten Tomatoes, the Tomatometer scores are: for each of the three LOTR films and the three 1977\u20131983 Star Wars films (report each).",
+      "url": "https://www.rottentomatoes.com/m/the_lord_of_the_rings_the_fellowship_of_the_ring",
+      "quote": "\"score\":\"91\",\"sentiment\":\"POSITIVE\",\"reviewsPageUrl\":\"/m/the_lord_of_the_rings_the_fellowship_of_the_ring/reviews\",\"scorePercent\":\"91%\",\"title\":\"Tomatometer\"",
+      "finding": "RT Tomatometer fetched from each film's own RT page today (2026-10-18; scores drift): Fellowship 91%, Two Towers 95%, Return of the King 94%; Star Wars/A New Hope 93%, Empire Strikes Back 93%, Return of the Jedi 83%. Quote shown is the Fellowship page's data; others read from the same field on their pages.",
+      "not_found": false,
+      "verdict": "CHECKED"
+    },
+    {
+      "id": 13,
+      "claim": "At the Academy Awards, Star Wars (1977) won 6 competitive Oscars plus 1 Special Achievement Award, while The Fellowship of the Ring (2001) won 4 Oscars.",
+      "url": "https://en.wikipedia.org/wiki/50th_Academy_Awards",
+      "quote": "Other winners included Star Wars with six awards",
+      "finding": "True: Star Wars won 6 competitive Oscars plus a Special Achievement Award (Ben Burtt, creature/robot voices); Fellowship of the Ring won 4 (Cinematography, Makeup, Original Score, Visual Effects) per its Wikipedia page, from 13 nominations. Source is Wikipedia, not the Academy database.",
+      "not_found": false,
+      "verdict": "TRUE"
+    },
+    {
+      "id": 13,
+      "claim": "At the Academy Awards, Star Wars (1977) won 6 competitive Oscars plus 1 Special Achievement Award, while The Fellowship of the Ring (2001) won 4 Oscars.",
+      "url": "https://www.oscars.org/oscars/ceremonies/1978",
+      "quote": "11 NOMINATIONS, 7 WINS",
+      "finding": "Partly/true on the Star Wars side: Academy page lists 7 wins incl. Art Direction, Costume, Film Editing, Score, Sound, Visual Effects (6 competitive) plus a Special Achievement Award; Fellowship per oscars.org 2002 page: 13 nominations, 4 wins (Cinematography, Makeup, Score, Visual Effects) - claim true",
+      "not_found": false,
+      "verdict": "PARTLY TRUE"
+    },
+    {
+      "id": 14,
+      "claim": "ILM shot visual-effects elements for the original Star Wars trilogy in VistaVision, whereas The Lord of the Rings trilogy was mastered on a 2K digital intermediate.",
+      "url": "https://vfxvoice.com/star-wars-a-force-for-innovation/",
+      "quote": "To capture their effects plates in the highest quality possible, ILM chose the VistaVision format.",
+      "finding": "Partly verified: ILM VistaVision for Star Wars effects confirmed (VFX Voice names A New Hope; ASC says Empire too); LOTR 2K DI only from secondary sources (HighDefWatch 4K review: 'In 2001, the film was scanned and rendered in 2K', Fellowship only; IMDb/ShotOnWhat list 2K DI) - no primary source found for all three films.",
+      "not_found": false,
+      "verdict": "PARTLY TRUE"
+    },
+    {
+      "id": 15,
+      "claim": "In Empire magazine's 2008 \"500 Greatest Movies of All Time\" poll, The Empire Strikes Back ranked #3; also report where the Lord of the Rings films ranked.",
+      "url": "https://www.theonering.net/torwp/2008/10/06/30121-empire-magazines-top-500-movies/",
+      "quote": "The Fellowship of the Ring: 24 The Two Towers: 54 The Return of the King: 34",
+      "finding": "True: Empire Strikes Back #3 (Slashfilm reprint of the Empire list: '3. Star Wars Episode V: Empire Strikes Back (Irvin Kershner,1980)'); LOTR: Fellowship #24, Two Towers #54, Return of the King #34 (Slashfilm confirms 24 and 34).",
+      "not_found": false,
+      "verdict": "TRUE"
+    }
+  ]
+}

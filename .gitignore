@@ -1,0 +1,10 @@
+# built or temporary: the pipeline builds the site itself
+public/
+test-deploy/
+deploy/
+.wrangler/
+__pycache__/
+node_modules/
+discussions/*/site-voice/audio/
+# local backups
+*.bak-*
