@@ -777,7 +777,7 @@ checked on a real phone, and only goes live once it's approved. The source is al
 {stage(4, "live", "the same build, on GitHub Pages at <code>neuralsummit.io</code>")}
 </ol>
 <p>Starting it, on the channel's machine:</p>
-{term("~/debates/site", 'python3 publish.py "what changed"', "Synced from ~/debates: 3 file(s) new or changed",
+{term("~/debates/site", 'python3 publish.py "what changed" "why, in a line or two"', "Synced from ~/debates: 3 file(s) new or changed",
       "Built 1 discussion(s) into public/", "Leak check: public/ is clean",
       "Pushed. Building now; check https://test.neuralsummit.io in a minute or two, then approve")}
 {step("Each discussion's inputs come in from the folders the debate and video tools write. New cards are voiced "

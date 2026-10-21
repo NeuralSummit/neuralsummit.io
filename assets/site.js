@@ -662,13 +662,14 @@ onPage((signal) => {
 	const player = new Audio();
 	player.preload = 'auto';
 	// A log of what the player and the page go through, to find out why a listen stops with the phone locked. Kept in
-	// this browser only (the last 400 lines) and shown by adding #listen-log to the address. Each line: the time, the
-	// page's visibility (v: on screen, h: hidden, e.g. locked) and what happened.
+	// this browser only (the last 400 lines) and shown by adding #listen-log to the address. Each line: the time, 🔒 if
+	// the page was hidden (the screen locked, or another app in front) or 🔓 if on screen, and what happened; anything
+	// that went wrong shows in red.
 	const LOGKEY = 'ns-listen-log';
 	const log = (what) => {
 		try {
 			const lines = JSON.parse(localStorage.getItem(LOGKEY) || '[]');
-			lines.push(`${new Date().toISOString().slice(11, 23)} ${document.visibilityState[0]} ${what}`);
+			lines.push(`${new Date().toISOString().slice(11, 23)} ${document.hidden ? '🔒' : '🔓'} ${what}`);
 			localStorage.setItem(LOGKEY, JSON.stringify(lines.slice(-400)));
 		} catch {}
 	};
@@ -683,8 +684,17 @@ onPage((signal) => {
 		try { lines = JSON.parse(localStorage.getItem(LOGKEY) || '[]'); } catch {}
 		const box = document.createElement('div');
 		box.className = 'listen-log';
-		box.innerHTML = `<div class="bar"><b>listen log</b> · ${lines.length} lines <button type="button" data-do="copy">copy</button><button type="button" data-do="clear">clear</button><button type="button" data-do="close">close</button></div><pre></pre>`;
-		box.querySelector('pre').textContent = lines.join('\n') || '(empty: start a listen, then come back here)';
+		// older lines said v and h for on screen and hidden
+		lines = lines.map((x) => x.replace(/^(\S+) ([vh]) /, (_, t, v) => `${t} ${v === 'h' ? '🔒' : '🔓'} `));
+		box.innerHTML = `<div class="bar"><b>listen log</b> · ${lines.length} lines <span class="key">🔒 hidden · 🔓 on screen</span><button type="button" data-do="copy">copy</button><button type="button" data-do="clear">clear</button><button type="button" data-do="close">close</button></div><pre></pre>`;
+		const pre = box.querySelector('pre');
+		if (!lines.length) pre.textContent = '(empty: start a listen, then come back here)';
+		for (const x of lines) {
+			const line = document.createElement('span');
+			if (/error|refused|failed/i.test(x)) line.className = 'bad'; // where it went wrong
+			line.textContent = x + '\n';
+			pre.append(line);
+		}
 		box.addEventListener('click', (ev) => {
 			const d = ev.target.dataset?.do;
 			if (d === 'copy') navigator.clipboard?.writeText(lines.join('\n'));

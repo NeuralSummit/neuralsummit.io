@@ -485,4 +485,7 @@ body.with-player { padding-bottom: 64px; }
 .listen-log .bar b { color: var(--evidence); }
 .listen-log .bar button { font: 12px var(--mono); color: var(--text); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; cursor: pointer; }
 .listen-log .bar button:first-of-type { margin-left: auto; }
+.listen-log .bar .key { color: var(--muted); font-size: 12px; }
+.listen-log pre .bad { color: #ff2a4d; font-weight: 600; } /* the logo's fringe red: hard, no glow */
+@media (max-width: 520px) { .listen-log .bar { flex-wrap: wrap; } .listen-log .bar .key { flex-basis: 100%; order: 9; } }
 .listen-log pre { margin: 0; padding: 10px 12px; overflow: auto; font: 11.5px/1.5 var(--mono); white-space: pre-wrap; color: var(--muted); }
