@@ -408,6 +408,10 @@ def voice_missing(d):
     words = sum(len(" ".join(x["text"] for x in sents).split()) for _, sents in todo.values())
     print(f"{d.name}: voicing {len(todo)} cards, {words} words (about {math.ceil(words * 3 / 1000)} min)", flush=True)
     (cache / "audio").mkdir(parents=True, exist_ok=True)
+    # anything still said as letters, so a new transcript's acronyms are caught: add them to debate.py's ACRONYMS
+    letters = sorted({w for _, sents in todo.values() for x in sents for w in re.findall(r"\b[A-Z]{2,}s?\b", x["spoken"])})
+    if letters:
+        print(f"  said as letters (add any that should be said in full to debate.py's ACRONYMS): {', '.join(letters)}", flush=True)
     jobs = [{"who": voice, "voice": voice, "file": f"audio/{k}.wav", "sentences": sents} for k, (voice, sents) in todo.items()]
     (cache / "audio/jobs.json").write_text(json.dumps(jobs))
     r = subprocess.run([str(vb.dbt.TTS_PYTHON), "-I", str(vb.VOICE_WORKER), "--model", str(timed_model()), "--voices",
