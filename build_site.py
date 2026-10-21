@@ -240,10 +240,12 @@ def folded(lines, refs, kind="", who=""):
 
 # ── listening: each card voiced ahead of time with the videos' Kokoro voices ─────────────────────────────────────
 # A card's words go through the video's own speech prep (debate.py's speakable(): no URLs or machine lines, names
-# respelt, years said properly; build.py's sentence splitter) and debate-video's voice.py, in the voice
-# of whoever wrote them. The audio is cached per debate in site-voice/<key>.m4a, the key hashing the voice and the
-# words, so only new or changed cards are voiced: `build_site.py --voice` voices what's missing (slow: about 3 minutes
-# per 1,000 words, on the CPU, free); a plain build uses what's there, and a card with no audio has no speaker button.
+# respelt, abbreviations said in full, years said properly; build.py's sentence splitter) and debate-video's voice.py,
+# in the voice of whoever is talking: the narrator names whose card it is where that isn't a side's own turn, and each
+# side reads its own points in a summary (heard()). The audio is cached per debate in site-voice/<key>.m4a, the key
+# hashing the voices and the words, so only new or changed cards are voiced: `build_site.py --voice` voices what's
+# missing (slow: about 3 minutes per 1,000 words, on the CPU, free); a plain build uses what's there, and a card with no
+# audio has no speaker button.
 SPEECH = {}  # debate dir -> {key: (voice, sentences)}, every card's, gathered while the pages are built
 KEYS = {}  # debate dir -> {hash of a card's voice and raw words: its audio key}, saved as site-voice/keys.json
 _vb = None
@@ -331,33 +333,38 @@ def timed_model():
     return dst
 
 
-def speech(d, voice, text):
-    """Queue a card's words for voicing; returns its key."""
-    raw = hashlib.sha1(json.dumps([voice, text]).encode()).hexdigest()[:16]
+def speech(d, parts):
+    """Queue a card's words for voicing, as (voice, text) parts said in turn; returns its key."""
+    raw = hashlib.sha1(json.dumps(list(parts[0]) if len(parts) == 1 else [list(x) for x in parts]).encode()).hexdigest()[:16]
     if not VIDEO_SKILL.exists():
         key = saved_keys(d).get(raw, raw)  # a card no local build has keyed has no audio, so no speaker button
         SPEECH.setdefault(d.name, {})[key] = None  # still listed, so its audio is copied into the build
         return key
     vb = video_build()
     sents = []
-    for line in vb.dbt.speakable(DASHES.sub(f" {ASIDE} ", text)).splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        if not re.search(r"[.!?:;]$", line):
-            line += "."  # a bullet or a label line ends where it ends, not run into the next
-        n = len(sents)
-        for x in vb.sentences(line):
-            if re.search(r"\w", x):
-                said, asides = spoken(x)
-                sents.append({"text": x.replace(ASIDE, "—"), "spoken": said, "voice": voice,
-                              "speed": SPEED.get(voice, 1.0), "pauses": pauses(),
-                              **({"asides": asides, "hush": PACE["hush"]} if asides else {}), "after": PACE["sentence"]})
-        if len(sents) > n:
-            sents[-1]["after"] = PACE["line"]  # the end of a paragraph or a bullet: a longer breath
+    for voice, text in parts:
+        for line in vb.dbt.speakable(DASHES.sub(f" {ASIDE} ", text)).splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if not re.search(r"[.!?:;]$", line):
+                line += "."  # a bullet or a label line ends where it ends, not run into the next
+            quoted = line.startswith(QUOTED)
+            line = line.removeprefix(QUOTED)
+            n = len(sents)
+            for x in vb.sentences(line):
+                if re.search(r"\w", x):
+                    said, asides = spoken(x)
+                    asides = [[None, None]] if quoted else asides  # all of it, quieter
+                    sents.append({"text": x.replace(ASIDE, "—"), "spoken": said, "voice": voice,
+                                  "speed": SPEED.get(voice, 1.0), "pauses": pauses(),
+                                  **({"asides": asides, "hush": PACE["hush"]} if asides else {}),
+                                  "after": PACE["sentence"]})
+            if len(sents) > n and not quoted:  # a quote runs on into its reply
+                sents[-1]["after"] = PACE["line"]  # the end of a paragraph or a bullet: a longer breath
     key = hashlib.sha1(json.dumps([[x["voice"], x["speed"], x["spoken"], x["pauses"], x.get("asides"), x.get("hush"),
                                     x["after"]] for x in sents]).encode()).hexdigest()[:16]
-    SPEECH.setdefault(d.name, {})[key] = (voice, sents)
+    SPEECH.setdefault(d.name, {})[key] = (parts[0][0], sents)
     KEYS.setdefault(d.name, {})[raw] = key
     return key
 
@@ -537,13 +544,50 @@ def listen(heard_for):
             '<span>every word</span></button></div></div>')
 
 
-def heard(e, who):
-    """What a transcript card says aloud: its text (not the voice line of a persona), after a few words saying what it
-    is, except for a side's own turn, where its voice says that."""
+QUOTED = "⁅"  # starts a line that quotes the other side, said like an aside: a little quieter, then a pause
+TURN_HEADING = re.compile(r"^#{1,6}\s*(Rebut|Opening|Closing)\s*$")  # the narrator has just said where we are
+QUOTE_LEAD = re.compile(r'^(\s*[-*•]\s+)\*\*["“](.+?)["”]\*\*[:.]?\s*')  # - **"the other side's words"**: reply
+REVIEWED = {"AGREE": "agreed", "AMEND": "amendments asked for"}
+
+
+def heard(e, who, voice_of, announce=""):
+    """What a transcript card says aloud, as (voice, text) parts said in turn: its text (not a persona's voice line),
+    after a few words from the narrator saying what it is, so the voice you hear is always the one talking. A side's
+    turn: the narrator says the round as it starts (`announce`), then the side, without its own "Rebut" heading, and
+    with the words it quotes from the other side said like an aside. A side's sides card is named as theirs ("Argon's
+    sides review, version 1: agreed"). A summary: the narrator names each side, just "Opus", "Argon" (their personas
+    were heard where they were set, in the sides cards; at every summary they'd grate), and the side reads its own
+    points."""
     # not the voice ids ("Voice: bf_emma", "voiced by `am_michael`"): they read out as nonsense
     lines = [re.sub(r",?\s*voiced by `?\w+`?", "", x) for x in e["lines"] if not x.strip().startswith("Voice: ")]
-    turn = who in ("claude", "gemini") and not e["kind"].startswith("Sides")
-    return ("" if turn else f"{e['kind']}.\n") + "\n".join(lines)
+    narrator = voice_of("narrator")
+    if who in ("claude", "gemini"):
+        if not e["kind"].startswith("Sides"):
+            first = next((i for i, x in enumerate(lines) if x.strip()), None)
+            if first is not None and TURN_HEADING.match(lines[first].strip()):
+                lines = lines[first + 1:]
+            lines = [QUOTE_LEAD.sub(lambda m: f"{m[1]}{QUOTED}{m[2]}{'' if m[2][-1] in '.!?' else '.'}\n{m[1]}", x) for x in lines]
+            return ([(narrator, announce)] if announce else []) + [(voice_of(who), "\n".join(lines))]
+        kind = re.sub(r"\s+v(\d+)$", r", version \1", e["kind"]).lower()  # "Sides draft v1": "sides draft, version 1"
+        verdict = next((m[1].upper() for m in (re.match(r"^VERDICT:\s*(\w+)", x.strip()) for x in lines) if m), "")
+        verdict = f": {REVIEWED.get(verdict, verdict.lower())}" if verdict else ""
+        return [(narrator, f"{e['who'].partition(' as ')[0]}'s {kind}{verdict}."), (voice_of(who), "\n".join(lines))]
+    parts = [(narrator, [f"{e['kind']}."])]
+    for x in lines:
+        side = re.match(r"^\*\*(🟠|🔵)\s*(.+?)\*\*", x.strip()) if who == "summary" else None
+        if side:
+            parts += [(narrator, [f"{side[2].partition(' as ')[0]}."]), (voice_of(DOTS[side[1]]), [])]
+        else:
+            parts[-1][1].append(x)
+    merged = []
+    for voice, said in parts:
+        if not "\n".join(said).strip():
+            continue
+        if merged and merged[-1][0] == voice:
+            merged[-1][1].extend(said)
+        else:
+            merged.append((voice, list(said)))
+    return [(voice, "\n".join(said)) for voice, said in merged]
 
 
 def transcript_page(d, meta):
@@ -575,6 +619,7 @@ def transcript_page(d, meta):
     asked = []  # (side, claim) from the sides' CHECK lines, in order: who made each claim the checker checked
     toc = [f'<li class="title"><a href="#top"># {html.escape(meta["title"])}</a></li>']
     heard_cards, check_cards = [], []  # (key, skipped by a quick listen), in page order; the fact-checks tab's keys
+    said_round = ""  # the round the narrator last announced, before its first turn
     mark = lambda tab, k: f"\x00{tab}{k}\x00"  # where a card's times go, once its listen file is made
     for e in entries:
         # a pointer to a local file ("Result: `result.md`") means nothing on the site
@@ -636,7 +681,7 @@ def transcript_page(d, meta):
             spoken = (f"{e['who'].replace('#', 'number ')}: {ev_verdict}.\n"
                       + (f"{p[side]['model']}'s {what}: " if side else "The claim: ") + (note.get("request") or claim) + "\n"
                       + (f"In short: {note['summary']}" if note.get("summary") else f"Finding: {finding}"))
-            key = speech(d, narrator, spoken)
+            key = speech(d, [(narrator, spoken)])
             heard_for["full"] += seconds(d, key)
             # a quick listen hears only the checks that caught something: one that came back true just confirms what
             # was said
@@ -661,7 +706,12 @@ def transcript_page(d, meta):
                 f'<time>{e["time"]}</time></header>{gist}<div class="text">{text}</div>'
                 f'<a class="back" href="#m-{anchor}">↩ in the transcript</a>{say(d, key)}</article>')
             continue
-        key = speech(d, voice_of(who), heard(e, who))
+        turn = who in ("claude", "gemini") and not e["kind"].startswith("Sides")
+        announce = ""
+        if turn and e["kind"] != said_round:
+            announce = {"Opening": "Openings.", "Closing": "Closings."}.get(e["kind"], f"{e['kind']}.")
+            said_round = e["kind"]
+        key = speech(d, heard(e, who, voice_of, announce))
         heard_for["full"] += seconds(d, key)
         # a quick listen leaves the sides' responses to their round's summary, and starts at the coin toss: the sides
         # being drafted and reviewed before it is background
