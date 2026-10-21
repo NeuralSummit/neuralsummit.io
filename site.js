@@ -322,6 +322,20 @@ onPage((signal) => {
 	});
 })();
 
+// Mousing over a link (YouTube, the repo) jolts its colour split wide and lets it settle, like the logo's lock.
+(() => {
+	if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+	for (const a of document.querySelectorAll('.ln')) a.addEventListener('mouseenter', () => {
+		const shifts = a.querySelectorAll('[data-shift]'), t0 = performance.now();
+		const step = (t) => {
+			const k = Math.min(1, (t - t0) / 420), amp = 0.34 + 1.6 * (1 - k) ** 2; // the mark's units: 0.34 at rest
+			shifts.forEach((s) => s.setAttribute('dx', (amp * s.dataset.shift).toFixed(3)));
+			if (k < 1) requestAnimationFrame(step);
+		};
+		requestAnimationFrame(step);
+	});
+})();
+
 // The transcript page's two tabs: the transcript, where each fact-check is a one-line marker, and the fact-checks
 // themselves as full cards. The address says which is open (#checks, #fc-7: the checks; anything else: the transcript),
 // so links to a check still work, including the old #check-7 ones. Without JS both show, one after the other.

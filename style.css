@@ -415,3 +415,25 @@ body.with-player { padding-bottom: 64px; }
 @media (max-width: 340px) {
 	.tabs .all { display: none; } /* no room: each card still has its own "full response" */
 }
+
+/* ── the links (YouTube, the site's repo): top right, opposite the logo, on the page's colour like the brand ── */
+/* each mark sits in a 40px target; the space between targets is what keeps them apart, not padding on the marks */
+.links { position: fixed; top: 27px; right: 20px; z-index: 11; display: flex; gap: 8px; padding: 4px; border-radius: 12px; background: var(--bg); }
+.ln { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; }
+.ln svg { display: block; pointer-events: none; }
+.ln:hover { background: #ffffff0a; }
+.ln:focus-visible { outline: 1px solid var(--evidence); outline-offset: 1px; }
+.links-foot { display: none; justify-content: center; gap: 14px; margin-bottom: 12px; }
+/* phones: in the header bar, clear of the name's cursor (which ends 300px in, whatever the width) by 20px or more */
+@media (max-width: 860px) {
+	.links { top: 0; right: 6px; height: 84px; align-items: center; padding: 0; background: none; }
+}
+/* under 410px two abreast would crowd the cursor: stacked, one above the other, in the bar's height */
+@media (max-width: 409px) {
+	.links { flex-direction: column; justify-content: center; gap: 0; }
+}
+/* under 360px there's no room in the bar at all: they move to the footer */
+@media (max-width: 359px) {
+	.links { display: none; }
+	.links-foot { display: flex; }
+}
