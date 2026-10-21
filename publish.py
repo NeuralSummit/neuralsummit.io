@@ -11,6 +11,7 @@ no real email is published), with Claude as co-author.
 """
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
 import build_site
@@ -29,7 +30,8 @@ def git(*args, check=True):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     msg = args[0] if args else "Update the site"
-    about = args[1] if len(args) > 1 else ""  # the commit's description, under its subject
+    # the commit's description, under its subject, wrapped at 72 as git expects (GitHub shows it as written, unwrapped)
+    about = textwrap.fill(args[1], 72, break_long_words=False, break_on_hyphens=False) if len(args) > 1 else ""
     sync.main()
     build_site.main()  # --voice, if given, is read by build_site itself
     sys.argv = [sys.argv[0], str(build_site.OUT)]
