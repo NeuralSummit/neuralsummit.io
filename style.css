@@ -252,10 +252,12 @@ a.dir, .home a.dir { color: var(--evidence); } /* one you can open: the site's l
 .tabs .all:hover { color: #f2c14e8c; border-color: #f2c14e50; }
 [data-tab="checks"] .tabs .all, [data-tab="checks"] .tabs .listen { display: none; }
 /* listening through the transcript: "▶ listen" opens the choice of a quick or a full listen */
-.listen { position: relative; margin-left: auto; align-self: center; }
+.listen { margin-left: auto; align-self: center; } /* not positioned: its menu hangs off the tab bar, not the button */
 .listen .go { padding: 4px 10px; font: 600 13px var(--mono); color: var(--evidence); background: none; border: 1px solid #f2c14e60; border-radius: 6px; cursor: pointer; }
 .listen .go:hover { background: #f2c14e12; }
-.listen .menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 6; width: 300px; padding: 6px; background: var(--panel-2); border: 1px solid #f2c14e55; border-radius: 10px; box-shadow: 0 14px 40px #000a; }
+/* the menu drops from the tab bar: just under its line, flush with its right end (the bar is sticky, so it's what the
+   menu is placed against). Off the button, it sat wherever the button happened to be and spread over the tabs. */
+.listen .menu { position: absolute; right: 0; top: calc(100% + 7px); z-index: 6; width: 320px; padding: 6px; background: var(--panel-2); border: 1px solid #f2c14e55; border-radius: 10px; box-shadow: 0 14px 40px #000a; }
 .listen .menu button { display: block; width: 100%; padding: 8px 10px; text-align: left; font: 13px var(--mono); color: var(--muted); background: none; border: 0; border-radius: 6px; cursor: pointer; }
 .listen .menu button:hover { background: #f2c14e12; color: var(--text); }
 .listen .menu b { color: var(--evidence); }
@@ -356,7 +358,7 @@ body.with-player { padding-bottom: 64px; }
 	.tabs a { padding: 8px 10px; }
 	.tabs .long { display: none; } /* "checks", "expand": short labels so the bar fits a phone in one row */
 	.listen .go, .tabs .all { padding: 4px 8px; font-size: 12.5px; }
-	.listen .menu { width: min(300px, calc(100vw - 32px)); }
+	.listen .menu { left: 0; width: auto; } /* phones: the bar's full width, like a sheet out of it */
 	/* the contents fold to one line until opened */
 	.tabbed .toc .label { cursor: pointer; display: inline-block; padding: 4px 0; }
 	.tabbed .toc .label::after { content: ' ▸'; color: var(--evidence); }
