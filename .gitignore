@@ -8,3 +8,4 @@ node_modules/
 discussions/*/site-voice/audio/
 # local backups
 *.bak-*
+discussions/*/site-voice/listen-*

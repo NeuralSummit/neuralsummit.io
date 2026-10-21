@@ -22,7 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install ffmpeg
+        # to join each listen's cards into one file (build_site.py's listen_file)
+        run: command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg)
       - name: Build the site
+        env:
+          REQUIRE_LISTENS: "1"
         run: python3 build_site.py
       - name: Leak check
         env:

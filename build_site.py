@@ -14,6 +14,8 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
+import wave
 from pathlib import Path
 
 HERE = Path(__file__).parent
@@ -345,6 +347,64 @@ def voice_missing(d):
         (cache / f"audio/{k}.wav.json").unlink(missing_ok=True)
 
 
+
+# ── a listen: the cards' audio joined into one file ─────────────────────────────────────────────────────────────
+# A phone with its screen locked lets audio that's already playing carry on, but pauses any that starts while it's
+# locked, so playing each card's own file in turn stopped at the first card change. Each way of listening through a
+# page (a quick or a full listen, or the fact-checks) is one file instead: the cards' audio end to end with a short beat
+# between, each card marked with where it starts and ends, and the player moves through it by time. Built wherever
+# there's an ffmpeg (the video skill's here, apt's in GitHub Actions), cached in site-voice/ by what it holds; not
+# committed, being made from what is.
+GAP = 0.4  # seconds of quiet between cards
+RATE = 24000  # the voices' sample rate
+LISTENS = {}  # debate dir -> the listen files its pages use
+
+
+def ffmpeg():
+    """(ffmpeg, its environment, an AAC encoder), or None."""
+    if (FFMPEG / "ffmpeg").exists():
+        return str(FFMPEG / "ffmpeg"), {"LD_LIBRARY_PATH": str(FFMPEG)}, "libfdk_aac"
+    if shutil.which("ffmpeg"):
+        return "ffmpeg", None, "aac"
+    return None
+
+
+def listen_file(d, keys):
+    """The cards' audio (by key, in order) as one file: (its name, [[start, end]] per key), or None without ffmpeg."""
+    if not keys:
+        return None
+    name = "listen-" + hashlib.sha1(json.dumps([keys, GAP, RATE]).encode()).hexdigest()[:16]
+    m4a, spans_f = d / "site-voice" / f"{name}.m4a", d / "site-voice" / f"{name}.json"
+    LISTENS.setdefault(d.name, set()).add(m4a.name)
+    if m4a.exists() and spans_f.exists():
+        return m4a.name, json.loads(spans_f.read_text())
+    ff = ffmpeg()
+    if not ff:
+        if os.environ.get("REQUIRE_LISTENS"):  # the pipeline: no quietly going back to a file per card
+            sys.exit("No ffmpeg to join the cards' audio into listens")
+        LISTENS[d.name].discard(m4a.name)
+        return None
+    exe, env, enc = ff
+    pcm, spans, gap = bytearray(), [], bytes(int(GAP * RATE) * 2)
+    for k in keys:
+        # decoded to plain samples and joined here, so every card's place is exact to the sample
+        # (via a WAV file: the video skill's ffmpeg can't write raw samples)
+        with tempfile.TemporaryDirectory() as tmp:
+            wav = Path(tmp) / "card.wav"
+            subprocess.run([exe, "-v", "error", "-i", str(d / "site-voice" / f"{k}.m4a"), "-ac", "1", "-ar", str(RATE),
+                            "-c:a", "pcm_s16le", "-f", "wav", str(wav)], env=env, check=True)
+            with wave.open(str(wav)) as w:
+                raw = w.readframes(w.getnframes())
+        start = len(pcm) / 2 / RATE
+        pcm += raw
+        spans.append([round(start, 3), round(len(pcm) / 2 / RATE, 3)])
+        pcm += gap
+    subprocess.run([exe, "-v", "error", "-y", "-f", "s16le", "-ar", str(RATE), "-ac", "1", "-i", "-", "-c:a", enc,
+                    "-b:a", "32k", "-movflags", "+faststart", "-f", "mp4", str(m4a)], input=bytes(pcm), env=env, check=True)
+    spans_f.write_text(json.dumps(spans))
+    print(f"{d.name}: joined {len(keys)} cards into {m4a.name} ({spans[-1][1] / 60:.0f} min)", flush=True)
+    return m4a.name, spans
+
 # ── a transcript page ──────────────────────────────────────────────────────────────────────────────────────────
 
 # what the sections before the rounds are, for a reader who hasn't seen how a debate runs
@@ -444,6 +504,8 @@ def transcript_page(d, meta):
     p = meta["context"]["people"]
     asked = []  # (side, claim) from the sides' CHECK lines, in order: who made each claim the checker checked
     toc = [f'<li class="title"><a href="#top"># {html.escape(meta["title"])}</a></li>']
+    heard_cards, check_cards = [], []  # (key, skipped by a quick listen), in page order; the fact-checks tab's keys
+    mark = lambda tab, k: f"\x00{tab}{k}\x00"  # where a card's times go, once its listen file is made
     for e in entries:
         # a pointer to a local file ("Result: `result.md`") means nothing on the site
         if all(re.match(r"^\w+: `[^`]+`$", x.strip()) for x in e["lines"] if x.strip()):
@@ -512,13 +574,19 @@ def transcript_page(d, meta):
             if caught:
                 heard_for["quick"] += seconds(d, key)
             audio = f' data-say="audio/{key}.m4a"' if seconds(d, key) else ""
-            body.append(f'<a class="check-line" id="m-{anchor}" href="#fc-{anchor}" data-check{audio}{"" if caught else " data-skim"}>'
+            if audio:
+                heard_cards.append((key, not caught))
+            body.append(f'<a class="check-line" id="m-{anchor}" href="#fc-{anchor}" data-check{audio}{"" if caught else " data-skim"}'
+                        f'{mark("t", len(heard_cards) - 1) if audio else ""}>'
                         f'<span class="num">#{html.escape(anchor.replace("-2", ""))}</span>{badge}'
                         f'<span class="claim">{whose}{html.escape(note.get("request") or note.get("claim", claim))}</span></a>')
             gist = (f'<p class="gist"><span class="lbl">In short</span>{html.escape(note["summary"])}</p>'
                     if note.get("summary") else "")
+            if say(d, key):
+                check_cards.append(key)
             cards.append(
-                f'<article class="entry evidence" id="fc-{anchor}" data-by="{side}" data-verdict="{verdict}"><header>'
+                f'<article class="entry evidence" id="fc-{anchor}" data-by="{side}" data-verdict="{verdict}"'
+                f'{mark("c", len(check_cards) - 1) if say(d, key) else ""}><header>'
                 f'<span class="kind">After {html.escape(where)}</span><span class="who">{html.escape(e["who"])}</span>{badge}'
                 f'<time>{e["time"]}</time></header>{gist}<div class="text">{text}</div>'
                 f'<a class="back" href="#m-{anchor}">↩ in the transcript</a>{say(d, key)}</article>')
@@ -530,13 +598,35 @@ def transcript_page(d, meta):
         skim = "full response" in text or e["kind"].startswith("Sides")
         if not skim:
             heard_for["quick"] += seconds(d, key)
+        if say(d, key):
+            heard_cards.append((key, skim))
         body.append(
-            f'<article class="entry {who}" id="{anchor}"{" data-skim" if skim else ""}><header>'
+            f'<article class="entry {who}" id="{anchor}"{" data-skim" if skim else ""}'
+            f'{mark("t", len(heard_cards) - 1) if say(d, key) else ""}><header>'
             f'<span class="kind">{html.escape(e["kind"])}</span>'
             f'<span class="who">{html.escape(name)}'
             + (f' <span class="persona">as {html.escape(persona)}</span>' if persona else "")
             + f"</span>{badge}<time>{e['time']}</time></header>"
             f'<div class="text">{text}</div>{say(d, key)}</article>')
+
+    # the listens: a full one through the transcript, a quick one without what it skips, and one through the checks
+    full = listen_file(d, [k for k, _ in heard_cards])
+    quick = listen_file(d, [k for k, skim in heard_cards if not skim])
+    checks_l = listen_file(d, check_cards)
+    quick_at = {}  # a transcript card's place in the quick listen
+    for i, (_, skim) in enumerate(heard_cards):
+        if not skim:
+            quick_at[i] = len(quick_at)
+    span = lambda f, j: f"{f[1][j][0]},{f[1][j][1]}"
+    def times(m):
+        tab, i = m[1][0], int(m[1][1:])
+        if tab == "c":
+            return f' data-full="{span(checks_l, i)}" data-quick="{span(checks_l, i)}"' if checks_l else ""
+        out = f' data-full="{span(full, i)}"' if full else ""
+        return out + (f' data-quick="{span(quick, quick_at[i])}"' if quick and i in quick_at else "")
+    fill = lambda html_: re.sub(r"\x00([tc]\d+)\x00", times, html_)
+    body, cards = [fill(x) for x in body], [fill(x) for x in cards]
+    files = lambda a, b: (f' data-file-full="audio/{a[0]}"' if a else "") + (f' data-file-quick="audio/{b[0]}"' if b else "")
 
     def chip(attr, value, label, count):
         n = f' <span class="n">{count}</span>'
@@ -566,8 +656,8 @@ def transcript_page(d, meta):
         '<nav class="tabs" role="tablist"><a href="#transcript" role="tab" data-tab="transcript">transcript</a>'
         f'<a href="#checks" role="tab" data-tab="checks"><span class="long">🔎 fact-</span>checks <span class="n">{len(cards)}</span></a>'
         + listen(heard_for) + '<button type="button" class="all" aria-pressed="false">expand<span class="long"> all</span></button></nav>'
-        f'<section class="panel" id="transcript" data-panel="transcript">{"".join(body)}</section>'
-        '<section class="panel" id="checks" data-panel="checks"><h2 class="section"><span class="num">## Fact-checks</span>'
+        f'<section class="panel" id="transcript" data-panel="transcript"{files(full, quick)}>{"".join(body)}</section>'
+        f'<section class="panel" id="checks" data-panel="checks"{files(checks_l, checks_l)}><h2 class="section"><span class="num">## Fact-checks</span>'
         '<span class="topic">Every claim the checker tested</span></h2>'
         '<p class="note checks-note">In the order they were run. Each starts with our plain-English summary; the checker’s '
         'own report follows, unedited. Hover or tap a 🔎 link anywhere in the transcript for a preview.</p>'
@@ -729,8 +819,11 @@ just after going live. The test site doesn't cache.</li>
 
 <h2><span class="hash">##</span> Listening</h2>
 <p>Each card is voiced ahead of time with the videos' Kokoro voices, and the build records which audio belongs to
-which card (<code>keys.json</code>), so it doesn't need the voices to build. While one card plays, the next few are
-fetched into memory, so a phone with its screen locked can carry on from card to card.</p>
+which card (<code>keys.json</code>), so it doesn't need the voices to build. A phone with its screen locked lets audio
+that's already playing carry on, but pauses any that starts while it's locked, so a listen isn't a card's file after
+another: the build joins each way of listening (quick, full, the fact-checks) into one file, with a short beat between
+cards and every card marked with where it starts. The player moves through that file by time, so going from card to
+card never starts anything new.</p>
 </main>"""
     return page("How this site is made", crumbs([HOME, "docs", "publishing"]) + body, depth=2)
 
@@ -822,6 +915,12 @@ def build():
                 (OUT / kind / d.name / "audio").mkdir()
                 for k in have:
                     shutil.copy(d / "site-voice" / f"{k}.m4a", OUT / kind / d.name / "audio" / f"{k}.m4a")
+                for f in LISTENS.get(d.name, ()):
+                    shutil.copy(d / "site-voice" / f, OUT / kind / d.name / "audio" / f)
+            # listen files no page uses any more (made from older words)
+            for f in (d / "site-voice").glob("listen-*") if (d / "site-voice").exists() else []:
+                if f.with_suffix(".m4a").name not in LISTENS.get(d.name, ()):
+                    f.unlink()
     for d, _ in found:  # a local build saves each card's audio key, for builds without the skill
         keys = dict(sorted(KEYS.get(d.name, {}).items()))
         f = d / "site-voice/keys.json"

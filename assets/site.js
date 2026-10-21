@@ -695,8 +695,15 @@ onPage((signal) => {
 	};
 	addEventListener('hashchange', showLog);
 	showLog();
-	let list = []; // the running order: {id, src, title, colour, skim}
-	let at = -1; // which of it is playing, or paused part-way
+	// What plays is always one file holding the cards end to end: a listen's own (quick, full, or the fact-checks;
+	// build_site.py joins each, with a short beat between cards, and marks every card with where it starts and ends in
+	// each: data-quick, data-full), or for a card on its own (a preview's copy) the card's own file. A phone with its
+	// screen locked lets audio that's already playing carry on but pauses any that starts while it's locked; when each
+	// card was its own file, that stopped a listen at its first card change. Now a change of card is a point in the
+	// same file: nothing new starts, so nothing gets paused.
+	let list = []; // the running order: {id, node, single, span: {quick, full}, file: {quick, full}, title, colour, skim}
+	let at = -1; // which card of it is playing, or paused part-way
+	let cur = null; // where that card's audio is: {file, t0, t1, m} (t1 Infinity: a card's own file, to its end)
 	let mode = 'quick';
 	let follow = true; // keeping what's read on screen
 	const now = () => list[at];
@@ -706,10 +713,24 @@ onPage((signal) => {
 	const colour = (c) => (c.matches('.claude') ? 'claude' : c.matches('.gemini') ? 'gemini' : c.matches('.evidence, .check-line') ? 'evidence' : 'narrator');
 	const titleOf = (c) => (c.matches('.check-line') ? `Fact-check ${c.querySelector('.num')?.textContent || ''}`
 		: `${c.querySelector('header .kind')?.textContent.trim() || ''} · ${c.querySelector('header .who')?.textContent.trim() || ''}`);
-	const entry = (c) => ({id: c.id || null, node: c.id ? null : c, src: new URL(src(c), location.href).href, title: titleOf(c), colour: colour(c), skim: c.hasAttribute('data-skim')});
+	const abs = (u) => new URL(u, location.href).href;
+	const span = (c, m) => (c.dataset[m] ? c.dataset[m].split(',').map(Number) : null);
+	const entry = (c) => {
+		const box = c.closest('[data-file-full]'); // the panel it's in, with its listens' files (a preview's copy has none)
+		const file = (m, f) => (box && span(c, m) && box.dataset[f] ? abs(box.dataset[f]) : null);
+		return {id: c.id || null, node: c.id ? null : c, single: abs(src(c)), title: titleOf(c), colour: colour(c), skim: c.hasAttribute('data-skim'),
+			span: {quick: span(c, 'quick'), full: span(c, 'full')}, file: {quick: file('quick', 'fileQuick'), full: file('full', 'fileFull')}};
+	};
 	// the order a card belongs to: everything with audio alongside it (a preview's copy of a card is on its own)
 	const orderOf = (c) => [...c.parentElement.querySelectorAll(':scope > .entry, :scope > .check-line[data-say]')].filter(src).map(entry);
 	const skip = (item) => mode === 'quick' && item.skim;
+	// where a card's audio is in this mode: its place in the listen's file; a card a quick listen leaves out, in the full
+	// one (so starting it carries on as a full listen); failing both, its own file
+	const where = (item, m = mode) => (item.file[m] ? {file: item.file[m], t0: item.span[m][0], t1: item.span[m][1], m}
+		: item.file.full ? {file: item.file.full, t0: item.span.full[0], t1: item.span.full[1], m: 'full'}
+		: {file: item.single, t0: 0, t1: Infinity, m: null});
+	const pos = () => (cur ? Math.max(0, player.currentTime - cur.t0) : 0); // how far into the card
+	const len = () => (cur && Number.isFinite(cur.t1) ? cur.t1 - cur.t0 : player.duration || 0);
 	const clock = (s) => (Number.isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}` : '0:00');
 
 	// the bar
@@ -744,19 +765,19 @@ onPage((signal) => {
 	};
 	let told = 0;
 	const tick = () => {
-		const d = player.duration || 0;
+		const d = len(), p = Math.min(pos(), d || Infinity);
 		if (!dragging) {
 			scrub.max = d || 1;
-			scrub.value = player.currentTime;
+			scrub.value = p;
 		}
-		scrub.style.setProperty('--p', d ? (player.currentTime / d).toFixed(4) : 0);
-		$('.time').textContent = `${clock(player.currentTime)} / ${clock(d)}`;
-		if (d) button(el(now()))?.style.setProperty('--p', (player.currentTime / d).toFixed(3)); // the card's ring fills too
-		// the lock screen's position bar, now and then
+		scrub.style.setProperty('--p', d ? (p / d).toFixed(4) : 0);
+		$('.time').textContent = `${clock(p)} / ${clock(d)}`;
+		if (d) button(el(now()))?.style.setProperty('--p', (p / d).toFixed(3)); // the card's ring fills too
+		// the lock screen's position bar (the card's), now and then
 		if (d && 'mediaSession' in navigator && navigator.mediaSession.setPositionState && performance.now() - told > 1000) {
 			told = performance.now();
 			try {
-				navigator.mediaSession.setPositionState({duration: d, position: Math.min(player.currentTime, d), playbackRate: player.playbackRate});
+				navigator.mediaSession.setPositionState({duration: d, position: p, playbackRate: player.playbackRate});
 			} catch {}
 		}
 	};
@@ -794,9 +815,9 @@ onPage((signal) => {
 	const keep = () => {
 		// the point the reading has reached, roughly: as far down the card as the audio is through it
 		const c = el(now());
-		if (!c || !follow || player.paused || !player.duration || document.hidden || performance.now() < bringing) return;
+		if (!c || !follow || player.paused || !len() || document.hidden || performance.now() < bringing) return;
 		const r = c.getBoundingClientRect();
-		const y = r.top + r.height * (player.currentTime / player.duration);
+		const y = r.top + r.height * Math.min(1, pos() / len());
 		if (y > bottom()) scrollBy({top: y - (top() + (bottom() - top()) * 0.3), behavior: 'smooth'});
 	};
 	for (const type of ['wheel', 'touchmove']) addEventListener(type, () => (follow = false), {passive: true});
@@ -804,40 +825,48 @@ onPage((signal) => {
 		if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(ev.key) && !ev.target.closest?.('input, button')) follow = false;
 	});
 
-	// The next cards' audio is fetched into memory while this one plays, so a card ending never waits on the network.
-	// With the phone locked, Android (Samsung's especially) cuts a page's network and timers in any gap where nothing
-	// plays; a next card still loading then stalled or errored, and the listen stopped.
-	const ready = new Map(); // src → its in-memory copy (a blob: URL), once fetched
-	const fetching = new Map(); // src → the fetch under way
-	const ahead = () => {
-		const want = new Set();
-		for (let i = at, n = 0; list[i] && n < 5; i++) if (i === at || !skip(list[i])) want.add(list[i].src), n++;
-		for (const s of want) {
-			if (ready.has(s) || fetching.has(s)) continue;
-			fetching.set(s, fetch(s).then((r) => (r.ok ? r.blob() : null)).then((b) => {
-				if (b && fetching.has(s)) ready.set(s, URL.createObjectURL(b)), log(`fetched ahead: ${ready.size} in memory`);
-			}).catch((e) => log(`fetch ahead failed: ${e.name}`)).finally(() => fetching.delete(s)));
-		}
-		for (const [s, u] of ready) if (!want.has(s)) ready.delete(s), URL.revokeObjectURL(u); // the ones gone by
-		for (const s of fetching.keys()) if (!want.has(s)) fetching.delete(s);
-	};
-	const playAt = (i) => {
-		at = i;
-		const item = now();
-		player.src = ready.get(item.src) || item.src; // the copy in memory if it's there: no network at all
-		log(`card ${i + 1} of ${list.length} (${player.src.startsWith('blob:') ? 'from memory' : 'from the network'}): ${item.title}`);
-		player.play().catch((e) => log(`play() refused: ${e.name}: ${e.message}`));
-		ahead();
-		show();
-		mark();
-		bring();
-		if ('mediaSession' in navigator) {
-			navigator.mediaSession.metadata = new MediaMetadata({title: item.title, artist: 'Neural Summit', album: document.title.replace(/ · .*$/, ''),
-				artwork: [{src: artwork, sizes: '512x512', type: 'image/png'}]});
-		}
-	};
 	// the site's root, from the logo's link home, for the lock screen's artwork
 	const artwork = new URL(document.querySelector('.brand')?.getAttribute('href') || 'index.html', location.href).href.replace(/index\.html$/, '') + 'artwork.png';
+	const meta = () => {
+		const item = now();
+		if (!item || !('mediaSession' in navigator)) return;
+		navigator.mediaSession.metadata = new MediaMetadata({title: item.title, artist: 'Neural Summit', album: document.title.replace(/ · .*$/, ''),
+			artwork: [{src: artwork, sizes: '512x512', type: 'image/png'}]});
+	};
+	// a new card: the bar, the lit card, the page and the lock screen catch up
+	const arrived = () => (show(), mark(), bring(), meta(), tick());
+	let seekTo = null; // where to be once a newly set file can seek
+	const playAt = (i, into = 0, play = true) => {
+		at = i;
+		cur = where(now());
+		if (cur.m) mode = cur.m;
+		const t = cur.t0 + into;
+		if (player.src !== cur.file) {
+			// a different file: only ever by a tap (starting a listen, a card, or switching quick/full), never on its own
+			player.src = cur.file;
+			seekTo = t;
+			if (t) player.currentTime = t;
+		} else player.currentTime = t; // the same file: just a new place in it
+		log(`card ${i + 1} of ${list.length} at ${t.toFixed(1)}s in ${cur.file.split('/').pop()}`);
+		if (play && player.paused) player.play().catch((e) => log(`play() refused: ${e.name}: ${e.message}`)); // already playing: nothing to start
+		arrived();
+	};
+	// as the file plays on: which card it has reached (the last one starting at or before here, in this file)
+	const reached = () => {
+		if (!now() || !cur || !Number.isFinite(cur.t1)) return;
+		const t = player.currentTime + 0.05;
+		let j = -1;
+		list.forEach((x, k) => {
+			const w = where(x);
+			if (w.file === cur.file && w.t0 <= t && (j < 0 || w.t0 >= where(list[j]).t0)) j = k;
+		});
+		if (j >= 0 && j !== at) {
+			at = j;
+			cur = where(now());
+			log(`now card ${j + 1} of ${list.length}`);
+			arrived();
+		}
+	};
 	const start = (c) => {
 		// a card's own order, starting at it
 		list = orderOf(c);
@@ -852,7 +881,7 @@ onPage((signal) => {
 		player.pause();
 		at = -1;
 		list = [];
-		ahead(); // lets go of the copies in memory
+		cur = null;
 		mark();
 		show();
 	};
@@ -860,9 +889,10 @@ onPage((signal) => {
 		if (!now()) return;
 		let i = at + by;
 		while (list[i] && skip(list[i])) i += by;
-		if (!list[i]) return by > 0 ? stop() : (player.currentTime = 0);
-		playAt(i);
+		if (!list[i]) return by > 0 ? stop() : (player.currentTime = cur.t0);
+		playAt(i, 0, !player.paused);
 	};
+	const back = () => (pos() > 3 ? (player.currentTime = cur.t0) : step(-1));
 	const menu = (open) => {
 		const m = document.querySelector('.listen .menu');
 		if (!m) return;
@@ -871,7 +901,7 @@ onPage((signal) => {
 	};
 
 	$('.toggle').addEventListener('click', () => (player.paused ? resume() : pause()));
-	$('.prev').addEventListener('click', () => ((follow = true), player.currentTime > 3 ? (player.currentTime = 0) : step(-1)));
+	$('.prev').addEventListener('click', () => ((follow = true), back()));
 	$('.next').addEventListener('click', () => ((follow = true), step(1)));
 	$('.close').addEventListener('click', stop);
 	$('.what').addEventListener('click', () => {
@@ -879,10 +909,23 @@ onPage((signal) => {
 		const c = el(now());
 		if (c) bringTo(c);
 	});
-	for (const b of bar.querySelectorAll('.mode button')) b.addEventListener('click', () => ((mode = b.dataset.mode), ahead(), show()));
+	for (const b of bar.querySelectorAll('.mode button')) b.addEventListener('click', () => {
+		// switching between quick and full: the same place in the other listen's file, or (to quick, on a card it
+		// leaves out) its next card
+		if (b.dataset.mode === mode) return;
+		mode = b.dataset.mode;
+		if (!now()) return show();
+		const playing = !player.paused, into = pos();
+		if (skip(now())) {
+			let i = at + 1;
+			while (list[i] && skip(list[i])) i++;
+			return list[i] ? playAt(i, 0, playing) : stop();
+		}
+		playAt(at, into, playing);
+	});
 	scrub.addEventListener('input', () => {
 		dragging = true;
-		player.currentTime = +scrub.value;
+		player.currentTime = (cur?.t0 || 0) + +scrub.value;
 		tick();
 	});
 	scrub.addEventListener('change', () => (dragging = false));
@@ -917,25 +960,29 @@ onPage((signal) => {
 	addEventListener('keydown', (ev) => ev.key === 'Escape' && menu(false));
 	// another page swapped in (the nav at the end): light the card being read, if it's there
 	addEventListener('pagestart', () => (mark(), show()));
-	player.addEventListener('ended', () => step(1));
+	// the end of the file: a card's own file goes on to the next card; a listen's file is the end of the listen
+	player.addEventListener('ended', () => (cur && !Number.isFinite(cur.t1) ? step(1) : stop()));
 	player.addEventListener('error', () => {
-		// a bad in-memory copy: fetch the file itself instead; only if that fails too does the listen stop
+		// a listen's file that won't play: the card's own file instead, from where it was; if that fails too, stop
 		const item = now();
-		if (!item) return;
-		if (player.src.startsWith('blob:')) {
-			ready.delete(item.src);
-			const t = player.currentTime;
-			player.src = item.src;
-			player.currentTime = t;
-			player.play().catch(() => {});
-		} else stop();
+		log(`error (code ${player.error?.code})`);
+		if (!item || player.src === item.single) return now() && stop();
+		const into = pos();
+		cur = {file: item.single, t0: 0, t1: Infinity, m: null};
+		player.src = item.single;
+		seekTo = into;
+		player.play().catch(() => {});
+	});
+	player.addEventListener('loadedmetadata', () => {
+		if (seekTo !== null && Math.abs(player.currentTime - seekTo) > 0.25) player.currentTime = seekTo;
+		seekTo = null;
+		tick();
 	});
 	// the lock screen's play/pause shows what's actually happening, and Android keeps the notification while it's "playing"
 	const state = (s) => 'mediaSession' in navigator && (navigator.mediaSession.playbackState = s);
 	player.addEventListener('play', () => (show(), mark(), state('playing')));
 	player.addEventListener('pause', () => (show(), mark(), state(now() ? 'paused' : 'none')));
-	player.addEventListener('timeupdate', () => (tick(), keep()));
-	player.addEventListener('loadedmetadata', tick);
+	player.addEventListener('timeupdate', () => (reached(), tick(), keep()));
 	if ('mediaSession' in navigator) {
 		const act = (name, fn) => {
 			try {
@@ -945,10 +992,11 @@ onPage((signal) => {
 		act('play', () => now() && resume());
 		act('pause', () => now() && pause());
 		act('nexttrack', () => now() && step(1));
-		act('previoustrack', () => now() && (player.currentTime > 3 ? (player.currentTime = 0) : step(-1)));
-		act('seekto', (d) => now() && (player.currentTime = d.seekTime));
-		act('seekbackward', (d) => now() && (player.currentTime = Math.max(0, player.currentTime - (d.seekOffset || 10))));
-		act('seekforward', (d) => now() && (player.currentTime = Math.min(player.duration || 0, player.currentTime + (d.seekOffset || 10))));
+		act('previoustrack', () => now() && back());
+		// the lock screen's bar is the card's: its times are into the card
+		act('seekto', (d) => now() && (player.currentTime = cur.t0 + d.seekTime));
+		act('seekbackward', (d) => now() && (player.currentTime = Math.max(cur.t0, player.currentTime - (d.seekOffset || 10))));
+		act('seekforward', (d) => now() && (player.currentTime = Math.min(cur.t0 + len(), player.currentTime + (d.seekOffset || 10))));
 	}
 })();
 
