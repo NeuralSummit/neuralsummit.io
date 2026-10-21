@@ -661,6 +661,40 @@ onPage((signal) => {
 (() => {
 	const player = new Audio();
 	player.preload = 'auto';
+	// A log of what the player and the page go through, to find out why a listen stops with the phone locked. Kept in
+	// this browser only (the last 400 lines) and shown by adding #listen-log to the address. Each line: the time, the
+	// page's visibility (v: on screen, h: hidden, e.g. locked) and what happened.
+	const LOGKEY = 'ns-listen-log';
+	const log = (what) => {
+		try {
+			const lines = JSON.parse(localStorage.getItem(LOGKEY) || '[]');
+			lines.push(`${new Date().toISOString().slice(11, 23)} ${document.visibilityState[0]} ${what}`);
+			localStorage.setItem(LOGKEY, JSON.stringify(lines.slice(-400)));
+		} catch {}
+	};
+	for (const ev of ['play', 'playing', 'pause', 'ended', 'waiting', 'stalled', 'emptied', 'abort', 'error'])
+		player.addEventListener(ev, () => log(`${ev}${ev === 'error' ? ` (code ${player.error?.code})` : ''} at ${player.currentTime.toFixed(1)}s of ${(player.duration || 0).toFixed(1)}s`));
+	for (const ev of ['visibilitychange', 'freeze', 'resume']) document.addEventListener(ev, () => log(`page ${ev}`));
+	for (const ev of ['pagehide', 'pageshow']) addEventListener(ev, () => log(`page ${ev}`));
+	const showLog = () => {
+		document.querySelector('.listen-log')?.remove();
+		if (location.hash !== '#listen-log') return;
+		let lines = [];
+		try { lines = JSON.parse(localStorage.getItem(LOGKEY) || '[]'); } catch {}
+		const box = document.createElement('div');
+		box.className = 'listen-log';
+		box.innerHTML = `<div class="bar"><b>listen log</b> · ${lines.length} lines <button type="button" data-do="copy">copy</button><button type="button" data-do="clear">clear</button><button type="button" data-do="close">close</button></div><pre></pre>`;
+		box.querySelector('pre').textContent = lines.join('\n') || '(empty: start a listen, then come back here)';
+		box.addEventListener('click', (ev) => {
+			const d = ev.target.dataset?.do;
+			if (d === 'copy') navigator.clipboard?.writeText(lines.join('\n'));
+			if (d === 'clear') { try { localStorage.removeItem(LOGKEY); } catch {} history.replaceState(null, '', location.pathname); box.remove(); }
+			if (d === 'close') { history.replaceState(null, '', location.pathname); box.remove(); }
+		});
+		document.body.append(box);
+	};
+	addEventListener('hashchange', showLog);
+	showLog();
 	let list = []; // the running order: {id, src, title, colour, skim}
 	let at = -1; // which of it is playing, or paused part-way
 	let mode = 'quick';
@@ -781,8 +815,8 @@ onPage((signal) => {
 		for (const s of want) {
 			if (ready.has(s) || fetching.has(s)) continue;
 			fetching.set(s, fetch(s).then((r) => (r.ok ? r.blob() : null)).then((b) => {
-				if (b && fetching.has(s)) ready.set(s, URL.createObjectURL(b));
-			}).catch(() => {}).finally(() => fetching.delete(s)));
+				if (b && fetching.has(s)) ready.set(s, URL.createObjectURL(b)), log(`fetched ahead: ${ready.size} in memory`);
+			}).catch((e) => log(`fetch ahead failed: ${e.name}`)).finally(() => fetching.delete(s)));
 		}
 		for (const [s, u] of ready) if (!want.has(s)) ready.delete(s), URL.revokeObjectURL(u); // the ones gone by
 		for (const s of fetching.keys()) if (!want.has(s)) fetching.delete(s);
@@ -791,7 +825,8 @@ onPage((signal) => {
 		at = i;
 		const item = now();
 		player.src = ready.get(item.src) || item.src; // the copy in memory if it's there: no network at all
-		player.play().catch(() => {});
+		log(`card ${i + 1} of ${list.length} (${player.src.startsWith('blob:') ? 'from memory' : 'from the network'}): ${item.title}`);
+		player.play().catch((e) => log(`play() refused: ${e.name}: ${e.message}`));
 		ahead();
 		show();
 		mark();
@@ -810,7 +845,7 @@ onPage((signal) => {
 		playAt(Math.max(0, i));
 	};
 	const resume = () => {
-		player.play().catch(() => {});
+		player.play().catch((e) => log(`play() refused on resume: ${e.name}: ${e.message}`));
 	};
 	const pause = () => player.pause();
 	const stop = () => {
@@ -904,7 +939,7 @@ onPage((signal) => {
 	if ('mediaSession' in navigator) {
 		const act = (name, fn) => {
 			try {
-				navigator.mediaSession.setActionHandler(name, fn);
+				navigator.mediaSession.setActionHandler(name, (d) => (log(`lock screen: ${name}`), fn(d)));
 			} catch {}
 		};
 		act('play', () => now() && resume());

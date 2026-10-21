@@ -478,3 +478,11 @@ body.with-player { padding-bottom: 64px; }
 	.pipeline .stage { margin: 0 0 12px; }
 	.pipeline .stage:not(:last-child)::after { top: auto; bottom: -13px; right: auto; left: 24px; width: 2px; height: 12px; }
 }
+
+/* the listen log (#listen-log): a plain panel over the page, for debugging playback on a phone */
+.listen-log { position: fixed; inset: 12px; z-index: 50; display: flex; flex-direction: column; background: var(--panel); border: 1px solid #f2c14e80; border-radius: 10px; overflow: hidden; }
+.listen-log .bar { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); font: 13px var(--mono); }
+.listen-log .bar b { color: var(--evidence); }
+.listen-log .bar button { font: 12px var(--mono); color: var(--text); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+.listen-log .bar button:first-of-type { margin-left: auto; }
+.listen-log pre { margin: 0; padding: 10px 12px; overflow: auto; font: 11.5px/1.5 var(--mono); white-space: pre-wrap; color: var(--muted); }
